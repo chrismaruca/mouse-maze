@@ -21,8 +21,13 @@ export class Mouse_Maze extends Scene {
             dark_wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('8b6914')})
         };
 
-        this.N = 12; // Dimensions: 12 x 12
-        this.SIZE = this.N * 4;
+        this.N = 12; // The board is N x N cells large
+        this.CELL_SIZE = 4; // Each cell is CELL_SIZE x CELL_SIZE large
+        this.SIZE = this.N * this.CELL_SIZE;
+        this.HEIGHT = 3; // The height of the walls
+
+        // Camera overlooking maze
+        this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
     }
         
     // Returns number between 0 to max-1
@@ -70,7 +75,7 @@ export class Mouse_Maze extends Scene {
                     break;
             }
 
-            if (nx >= 0 && nx < this.N && nz >= 0 && nz < this.N && !Maze.visited[nx][nz]) {
+            if (!Maze.visited[nx][nz]) {
                 Maze.visited[nx][nz] = true;
                 Maze.connected[x][z][r] = true;
                 Maze.connected[nx][nz][(r+2)%4] = true;
@@ -94,23 +99,23 @@ export class Mouse_Maze extends Scene {
 
     log_maze(connected) {
         let out = "";
-        for (let i = 0; i < this.N; i++) {
-            for (let j = 0; j < this.N; j++) {
+        for (let z = 0; z < this.N; z++) {
+            for (let x = 0; x < this.N; x++) {
                 out += "+";
-                out += (connected[i][j][2] ? " " : "-");
+                out += (connected[x][z][3] ? " " : "-");
                 //out += "+";
             }
             out += "+\n";
-            for (let j = 0; j < this.N; j++) {
-                out += (connected[i][j][3] ? " " : "|");
+            for (let x = 0; x < this.N; x++) {
+                out += (connected[x][z][2] ? " " : "|");
                 out += " ";
-                //out += (connected[i][j][1] ? " " : "|");
+                //out += (connected[x][z][0] ? " " : "|");
             }
             /*
             out += "\n";
-            for (let j = 0; j < this.N; j++) {
+            for (let x = 0; x < this.N; x++) {
                 out += "+";
-                out += (connected[i][j][0] ? " " : "-");
+                out += (connected[x][z][1] ? " " : "-");
                 out += "+";
             }*/
             out += "|\n";
@@ -122,6 +127,60 @@ export class Mouse_Maze extends Scene {
         console.log(out);
     }
 
+    draw_maze(context, program_state) {
+        let peg_model_transform = Mat4.identity();
+        let x_wall_model_transform = Mat4.identity();
+        let z_wall_model_transform = Mat4.identity();
+
+        // Transformations
+        let OriginTr = Mat4.translation(1, 1, 1);
+        let TrUp = Mat4.translation(0, 1, 0);
+        let TrXDir = Mat4.translation(this.CELL_SIZE, 0, 0);
+        let TrZDir = Mat4.translation(0, 0, this.CELL_SIZE);
+
+        // For the pegs
+        let PegSc = Mat4.scale(0.5, this.HEIGHT, 0.5);
+        peg_model_transform = peg_model_transform.times(TrUp).times(PegSc).times(OriginTr);
+
+        // Draw pegs
+        for (let i = 0; i <= this.N; i++) {
+            let curr_model_transform = peg_model_transform;
+            for (let j = 0; j <= this.N; j++) {
+                this.shapes.cube.draw(context, program_state, curr_model_transform, this.materials.wood);
+                curr_model_transform = TrZDir.times(curr_model_transform);
+            }
+            peg_model_transform = TrXDir.times(peg_model_transform);
+        }
+
+        // Translations for the walls
+        let XWallSc = Mat4.scale((this.CELL_SIZE-1)*0.5, this.HEIGHT, 0.5);
+        let ZWallSc = Mat4.scale(0.5, this.HEIGHT, (this.CELL_SIZE-1)*0.5);
+        let XWallAdj = Mat4.translation(1, 0, 0);
+        let ZWallAdj = Mat4.translation(0, 0, 1);
+        x_wall_model_transform = x_wall_model_transform.times(XWallAdj).times(TrUp).times(XWallSc).times(OriginTr);
+        z_wall_model_transform = z_wall_model_transform.times(ZWallAdj).times(TrUp).times(ZWallSc).times(OriginTr);
+        
+        // Draw walls
+        let TotalZTr = Mat4.identity();
+        for (let z = 0; z < this.N; z++) {
+            let TotalXZTr = TotalZTr;
+            for (let x = 0; x < this.N; x++) {
+                if (!this.maze[x][z][3])
+                    this.shapes.cube.draw(context, program_state, TotalXZTr.times(x_wall_model_transform), this.materials.light_wood);
+                if (!this.maze[x][z][2])
+                    this.shapes.cube.draw(context, program_state, TotalXZTr.times(z_wall_model_transform), this.materials.light_wood);
+                TotalXZTr = TrXDir.times(TotalXZTr);
+            }
+            this.shapes.cube.draw(context, program_state, TotalXZTr.times(z_wall_model_transform), this.materials.light_wood);
+            TotalZTr = TrZDir.times(TotalZTr);
+        }
+        // Draw bottom wall
+        let TotalXZTr = TotalZTr;
+        for (let x = 0; x < this.N; x++) {
+            this.shapes.cube.draw(context, program_state, TotalXZTr.times(x_wall_model_transform), this.materials.light_wood);
+            TotalXZTr = TrXDir.times(TotalXZTr);
+        }
+    }
 
     draw_floor(context, program_state) {
         let floor_model_transform = Mat4.identity();
@@ -131,8 +190,9 @@ export class Mouse_Maze extends Scene {
         //let FloorTr = Mat4.translation(0, -1, 0);
         
         floor_model_transform = floor_model_transform.times(FloorSc).times(OriginTr);
-        this.shapes.cube.draw(context, program_state, floor_model_transform, this.materials.wood);
-        
+        this.shapes.cube.draw(context, program_state, floor_model_transform, this.materials.dark_wood);
+        /*
+        // Outer walls
         let plank_model_transform = Mat4.identity();
 
         let PlankScDown = Mat4.scale(0.5, 0.5, 0.5);
@@ -154,15 +214,17 @@ export class Mouse_Maze extends Scene {
         this.shapes.cube.draw(context, program_state, PlankXTr.times(PlankRt).times(plank_model_transform), this.materials.light_wood)
         // Bottom wall z = SIZE
         this.shapes.cube.draw(context, program_state, PlankZAdj.times(PlankZTr).times(plank_model_transform), this.materials.light_wood);
+        */
     }
 
     display(context, program_state) {
         // Initial setup
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            program_state.set_camera(Mat4.translation(0, 0, 0));
+            program_state.set_camera(this.initial_camera_location);
             
-            this.log_maze(this.generate_maze_connections());
+            this.maze = this.generate_maze_connections();
+            this.log_maze(this.maze);
         }
         // Projection matrix
         program_state.projection_transform = Mat4.perspective(
@@ -172,5 +234,6 @@ export class Mouse_Maze extends Scene {
         program_state.lights = [];
         
         this.draw_floor(context, program_state);
+        this.draw_maze(context, program_state)
     }
 }
