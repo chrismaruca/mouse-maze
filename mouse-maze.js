@@ -270,6 +270,7 @@ export class Mouse_Maze extends Scene {
         //draw example TEXT
         const testText = new Text_Line(10);
         testText.set_string("hey there", context);
+        //text function call not working right now. look into it later
 
 
     }
