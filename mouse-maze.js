@@ -1,4 +1,5 @@
 import {defs, tiny} from './common.js';
+import {Text_Line} from "./text-demo.js";
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
@@ -264,6 +265,10 @@ export class Mouse_Maze extends Scene {
         let test_transform = Mat4.identity();
        let randomPositionCheese = test_transform.times(Mat4.translation(this.randX,1,this.randY));
         this.shapes.cube.draw(context, program_state, randomPositionCheese, this.materials.wood.override({color: hex_color('#FFFF00')}));
+
+        //Testing out text
+        const testText = new Text_Line(10);
+        testText.set_string("HELLO WORLD", context);
 
 
     }
