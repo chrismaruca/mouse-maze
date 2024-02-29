@@ -1,10 +1,7 @@
 import {defs, tiny} from './common.js';
-<<<<<<< HEAD
 import {Text_Line} from "./text-demo.js"
 
-=======
-//import {Text_Line} from "./text-demo";
->>>>>>> ChristiansBranch
+
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
@@ -276,18 +273,16 @@ export class Mouse_Maze extends Scene {
        let randomPositionCheese = test_transform.times(Mat4.translation(this.randX,1,this.randY));
         this.shapes.cube.draw(context, program_state, randomPositionCheese, this.materials.wood.override({color: hex_color('#FFFF00')}));
 
-<<<<<<< HEAD
+
         //draw example TEXT
         const testText = new Text_Line(10);
         testText.set_string("hey there", context);
         //text function call not working right now. look into it later
-=======
-       //const testText = new Text_Line(10);
-        //testText.set_string("hey");
+
 
         //mouse camera position
 
->>>>>>> ChristiansBranch
+
 
 
     }
