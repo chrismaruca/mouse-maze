@@ -280,8 +280,7 @@ export class Mouse_Maze extends Scene {
         //text function call not working right now. look into it later
 
 
-        //mouse camera position
-
+        //mouse camera positiion
 
 
 
