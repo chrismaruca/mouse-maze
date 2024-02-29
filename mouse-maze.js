@@ -5,7 +5,6 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
 } = tiny;
 
-
 export class Mouse_Maze extends Scene {
     constructor() {
         super();
@@ -30,10 +29,6 @@ export class Mouse_Maze extends Scene {
 
         // Camera overlooking maze
         this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
-        //initialize cheese position vars
-        this.randX = 0;
-        this.randY = 0;
-
     }
         
     // Returns number between 0 to max-1
@@ -223,20 +218,11 @@ export class Mouse_Maze extends Scene {
         */
     }
 
-
-    //generates cheese position only onc
-    randomCheesePosition(){
-        this.randX = this.get_rand_num(this.SIZE);
-        this.randY = this.get_rand_num(this.SIZE);
-    }
-
-
     display(context, program_state) {
         // Initial setup
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             program_state.set_camera(this.initial_camera_location);
-            this.randomCheesePosition(); //new cheese position every time refreshed
             
             this.maze = this.generate_maze_connections();
             this.log_maze(this.maze);
@@ -249,6 +235,7 @@ export class Mouse_Maze extends Scene {
         program_state.lights = [];
         
         this.draw_floor(context, program_state);
+<<<<<<< HEAD
         this.draw_maze(context, program_state);
 
 
@@ -271,5 +258,8 @@ export class Mouse_Maze extends Scene {
         testText.set_string("HELLO WORLD", context);
 
 
+=======
+        this.draw_maze(context, program_state)
+>>>>>>> parent of 4b130d1 (added cheese and random placement on refresh)
     }
 }
