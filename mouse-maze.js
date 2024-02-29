@@ -4,6 +4,7 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
 } = tiny;
 
+
 export class Mouse_Maze extends Scene {
     constructor() {
         super();
@@ -28,6 +29,10 @@ export class Mouse_Maze extends Scene {
 
         // Camera overlooking maze
         this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
+        //initialize cheese position vars
+        this.randX = 0;
+        this.randY = 0;
+
     }
         
     // Returns number between 0 to max-1
@@ -217,11 +222,20 @@ export class Mouse_Maze extends Scene {
         */
     }
 
+
+    //generates cheese position only onc
+    randomCheesePosition(){
+        this.randX = this.get_rand_num(this.SIZE);
+        this.randY = this.get_rand_num(this.SIZE);
+    }
+
+
     display(context, program_state) {
         // Initial setup
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             program_state.set_camera(this.initial_camera_location);
+            this.randomCheesePosition(); //new cheese position every time refreshed
             
             this.maze = this.generate_maze_connections();
             this.log_maze(this.maze);
@@ -234,6 +248,23 @@ export class Mouse_Maze extends Scene {
         program_state.lights = [];
         
         this.draw_floor(context, program_state);
-        this.draw_maze(context, program_state)
+        this.draw_maze(context, program_state);
+
+
+
+        //x and z random change. y == 1 held constant. random position cheese
+
+        //TO DO: make sure randomCheesePosition() called when other player touches it
+        //TO DO: make sure cheese doesn't spawn in wall
+        //TO DO:
+
+
+
+      //draw cheese
+        let test_transform = Mat4.identity();
+       let randomPositionCheese = test_transform.times(Mat4.translation(this.randX,1,this.randY));
+        this.shapes.cube.draw(context, program_state, randomPositionCheese, this.materials.wood.override({color: hex_color('#FFFF00')}));
+
+
     }
 }
