@@ -236,6 +236,7 @@ export class Mouse_Maze extends Scene {
         
         this.draw_floor(context, program_state);
 <<<<<<< HEAD
+<<<<<<< HEAD
         this.draw_maze(context, program_state);
 
 
@@ -258,6 +259,9 @@ export class Mouse_Maze extends Scene {
         testText.set_string("HELLO WORLD", context);
 
 
+=======
+        this.draw_maze(context, program_state)
+>>>>>>> parent of 4b130d1 (added cheese and random placement on refresh)
 =======
         this.draw_maze(context, program_state)
 >>>>>>> parent of 4b130d1 (added cheese and random placement on refresh)
