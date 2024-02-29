@@ -1,6 +1,6 @@
 import {defs, tiny} from './common.js';
 import {Mouse_Maze} from "./mouse-maze.js";
-
+import {Text_Demo} from "./text-demo.js";
 // Pull these names into this module's scope for convenience:
 const {
     Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Light, Shape, Material, Shader, Texture, Scene,
@@ -18,7 +18,7 @@ const {
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
 
 Object.assign(defs,
-    {Mouse_Maze},
+    {Mouse_Maze},{Text_Demo}
 );
 
 // ******************** End extra step
@@ -26,6 +26,8 @@ Object.assign(defs,
 // (Can define Main_Scene's class here)
 
 const Main_Scene = Mouse_Maze;
+const Text_Scene = Text_Demo;
+
 const Additional_Scenes = [];
 
-export {Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs}
+export {Main_Scene, Text_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs}

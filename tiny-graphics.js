@@ -1143,6 +1143,17 @@ const Shader = tiny.Shader =
 
         fragment_glsl_code() {
         }
+        //added default_uniforms()
+        static default_uniforms () {
+            return {
+                camera_inverse      : Mat4.identity (),
+                camera_transform    : Mat4.identity (),
+                projection_transform: Mat4.identity (),
+                animate             : true,
+                animation_time      : 0,
+                animation_delta_time: 0
+            };
+        }
 
         update_GPU() {
         }
@@ -1436,3 +1447,193 @@ const Scene = tiny.Scene =
         show_explanation(document_section) {
         }                            // show_explanation(): Called by Text_Widget for generating documentation.
     }
+
+    //ADDED FOR TEXT SCREEN FUNCTIONALITY
+const Component = tiny.Component =
+    class Component {
+        // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#component
+        uniforms = Shader.default_uniforms ();
+        constructor (props = {}) {
+            const rules = [
+                `.documentation_treenode { }`,
+                `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
+                                    box-shadow:10px 10px 90px 0 inset LightGray }`
+            ];
+            Component.initialize_CSS (Component, rules);
+
+            this.props = props;
+            if (this.props.uniforms) this.uniforms = this.props.uniforms;
+
+            this.animated_children  = [];
+            this.document_children  = [];
+            // Set up how we'll handle key presses for the scene's control panel:
+            const callback_behavior = (callback, event) => {
+                callback (event);
+                // Fire the callback and cancel any default browser shortcut that is an exact match:
+                event.preventDefault ();
+                // Don't bubble the event to parent nodes; let child elements be targeted in isolation.
+                event.stopPropagation ();
+            };
+            this.key_controls       = new Keyboard_Manager (document, callback_behavior);
+            // Finally, run the user's code for setting up their scene:
+            this.init ();
+        }
+        static types_used_before = new Set ();
+        static initialize_CSS (classType, rules) {
+            if (Component.types_used_before.has (classType))
+                return;
+
+            if (document.styleSheets.length === 0) document.head.appendChild (document.createElement ("style"));
+            for (const r of rules) document.styleSheets[ document.styleSheets.length - 1 ].insertRule (r, 0);
+            Component.types_used_before.add (classType);
+        }
+        make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
+            this.canvas              = canvas;
+            const try_making_context = name => this.context = this.canvas.getContext (name);
+            for (let name of ["webgl", "experimental-webgl", "webkit-3d", "moz-webgl"])
+                if (try_making_context (name)) break;
+            if ( !this.context) throw "Canvas failed to make a WebGL context.";
+            const gl = this.context;
+
+            this.set_canvas_size (dimensions);
+            // Tell the GPU which color to clear the canvas with each frame.
+            gl.clearColor.apply (gl, background_color);
+            // Load an extension to allow shapes with more than 65535 vertices.
+            gl.getExtension ("OES_element_index_uint");
+            gl.enable (gl.DEPTH_TEST);                            // Enable Z-Buffering test.
+            // Specify an interpolation method for blending "transparent" triangles over the existing pixels:
+            gl.enable (gl.BLEND);
+            gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            // Store a single red pixel, as a placeholder image to prevent a console warning:
+            gl.bindTexture (gl.TEXTURE_2D, gl.createTexture ());
+            gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                new Uint8Array ([255, 0, 0, 255]));
+
+            // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
+            window.requestAnimFrame = (w =>
+                w.requestAnimationFrame || w.webkitRequestAnimationFrame
+                || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
+                || function (callback) { w.setTimeout (callback, 1000 / 60); }) (window);
+        }
+        set_canvas_size (dimensions = [1080, 600]) {
+            // We must change size in CSS, wait for style re-flow, and then change size again within canvas attributes.
+            // Both steps are needed; attributes on a canvas have a special effect on buffers, separate from their style.
+            const [width, height]         = dimensions;
+            this.canvas.style[ "width" ]  = width + "px";
+            this.canvas.style[ "height" ] = height + "px";
+            Object.assign (this, {width, height});
+            Object.assign (this.canvas, {width, height});
+            // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
+            this.context.viewport (0, 0, width, height);
+        }
+        frame_advance (time = 0) {
+            if ( !this.props.dont_tick) {
+                this.uniforms.animation_delta_time = time - this.prev_time | 0;
+                if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
+                this.prev_time = time;
+            }
+
+            const gl = this.context;
+            if (gl)
+                gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+
+            const open_list = [this];
+            while (open_list.length)                           // Traverse all Scenes and their children, recursively.
+            {
+                open_list.push (...open_list[ 0 ].animated_children);
+                // Call display() to draw each registered animation:
+                open_list.shift ().render_animation (this);
+            }
+            // Now that this frame is drawn, request that render() happen again as soon as all other web page events
+            // are processed:
+            this.event = window.requestAnimFrame (this.frame_advance.bind (this));
+        }
+        new_line (parent = this.control_panel) { parent.appendChild (document.createElement ("br")); }
+        live_string (callback, parent = this.control_panel) {
+            parent.appendChild (
+                Object.assign (document.createElement ("div"), {className: "live_string", onload: callback}));
+        }
+        key_triggered_button (description, shortcut_combination, callback,
+                              color                    = '#' + Math.random ().toString (9).slice (-6),
+                              release_event, recipient = this,
+                              parent                   = this.control_panel) {
+            const button         = parent.appendChild (document.createElement ("button"));
+            button.default_color = button.style.backgroundColor = color;
+            const press          = () => {
+                    Object.assign (button.style, {
+                        'background-color'         : 'red',
+                        'z-index': "1", 'transform': "scale(2)"
+                    });
+                    callback.call (recipient);
+                },
+                release        = () => {
+                    Object.assign (button.style, {
+                        'background-color'         : button.default_color,
+                        'z-index': "0", 'transform': "scale(1)"
+                    });
+                    if ( !release_event) return;
+                    release_event.call (recipient);
+                };
+            const key_name       = shortcut_combination.join ('+').split (" ").join ("Space");
+            button.textContent   = "(" + key_name + ") " + description;
+            button.addEventListener ("mousedown", press);
+            button.addEventListener ("mouseup", release);
+            button.addEventListener ("touchstart", press, {passive: true});
+            button.addEventListener ("touchend", release, {passive: true});
+            if ( !shortcut_combination) return;
+            this.key_controls.add (shortcut_combination, press, release);
+        }
+        render_layout (div, options = {}) {
+            this.div         = div;
+            div.className    = "documentation_treenode";
+            // Fit the existing document content to a fixed size:
+            div.style.margin = "auto";
+            div.style.width  = "1080px";
+
+            this.document_region           = div.appendChild (document.createElement ("div"));
+            this.document_region.className = "documentation";
+            this.render_explanation ();
+            // The next div down will hold a canvas and/or related interactive areas.
+            this.program_stuff = div.appendChild (document.createElement ("div"));
+
+            const defaults = {
+                show_canvas: true, make_controls: true,
+                make_editor: false, make_code_nav: true
+            };
+
+            const overridden_options = Object.assign (defaults, this.widget_options, options);
+
+            // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an
+            // eye out.
+            const canvas = this.program_stuff.appendChild (document.createElement ("canvas"));
+            canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
+
+            if ( !overridden_options.show_canvas)
+                canvas.style.display = "none";
+            // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
+            this.make_context (canvas);
+            // Start WebGL main loop - render() will re-queue itself for continuous calls.
+            this.event = window.requestAnimFrame (this.frame_advance.bind (this));
+
+            if (overridden_options.make_controls) {
+                this.embedded_controls_area           = this.program_stuff.appendChild (document.createElement ("div"));
+                this.embedded_controls_area.className = "controls-widget";
+                this.embedded_controls                = new tiny.Controls_Widget (this);
+            }
+            if (overridden_options.make_code_nav) {
+                this.embedded_code_nav_area           = this.program_stuff.appendChild (document.createElement ("div"));
+                this.embedded_code_nav_area.className = "code-widget";
+                this.embedded_code_nav                = new tiny.Code_Widget (this);
+            }
+            if (overridden_options.make_editor) {
+                this.embedded_editor_area           = this.program_stuff.appendChild (document.createElement ("div"));
+                this.embedded_editor_area.className = "editor-widget";
+                this.embedded_editor                = new tiny.Editor_Widget (this);
+            }
+        }
+
+        init () {}
+        render_animation (context) {}                            // Called each frame for drawing.
+        render_explanation () {}
+        render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
+    };

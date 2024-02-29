@@ -1,4 +1,5 @@
 import {defs, tiny} from './common.js';
+//import {Text_Line} from "./text-demo";
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
@@ -29,6 +30,10 @@ export class Mouse_Maze extends Scene {
 
         // Camera overlooking maze
         this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
+        //mouse camera within maze
+        //if (startGame == true)
+            //this.camera = [...]
+
         //initialize cheese position vars
         this.randX = 0;
         this.randY = 0;
@@ -235,6 +240,7 @@ export class Mouse_Maze extends Scene {
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             program_state.set_camera(this.initial_camera_location);
+            //program_state.set_camera(this.initial_camera_location2); //mouse camera
             this.randomCheesePosition(); //new cheese position every time refreshed
             
             this.maze = this.generate_maze_connections();
@@ -256,7 +262,7 @@ export class Mouse_Maze extends Scene {
 
         //TO DO: make sure randomCheesePosition() called when other player touches it
         //TO DO: make sure cheese doesn't spawn in wall
-        //TO DO:
+        //TO DO: [....]
 
 
 
@@ -264,6 +270,12 @@ export class Mouse_Maze extends Scene {
         let test_transform = Mat4.identity();
        let randomPositionCheese = test_transform.times(Mat4.translation(this.randX,1,this.randY));
         this.shapes.cube.draw(context, program_state, randomPositionCheese, this.materials.wood.override({color: hex_color('#FFFF00')}));
+
+       //const testText = new Text_Line(10);
+        //testText.set_string("hey");
+
+        //mouse camera position
+
 
 
     }
