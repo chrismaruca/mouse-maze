@@ -14,6 +14,7 @@ export class Mouse_Maze extends Scene {
         // Shapes
         this.shapes = {
             cube: new defs.Cube(),
+            cheese: new defs.Cube(),
             peg: new defs.Cube(),
             wall: new defs.Cube(),
             floor: new defs.Cube(),
@@ -38,10 +39,11 @@ export class Mouse_Maze extends Scene {
             }),
             floor: new Material(textured_phong, {
                 ambient: .8, diffusivity: .8, specularity: .2,
-                texture: new Texture('../assets/floor.jpg')}),
-            cheese: new Material(phong, {
+                texture: new Texture('../assets/floor.jpg')
+            }),
+            cheese: new Material(textured_phong, {
                 ambient: .8, diffusivity: 1, specularity: 1,
-                color: hex_color('#FFFF00')
+                texture: new Texture('../assets/cheese.jpg')
             }),
             text_image: new Material(textured_phong, {
                 ambient: 1, diffusivity: 0, specularity: 0,
@@ -64,7 +66,7 @@ export class Mouse_Maze extends Scene {
         let mouse_speed = 8;
         this.Mouse = new Mouse(this, mouse_start_pos, mouse_speed);
 
-        // Adjust textures for floor and pegs
+        // Adjust textures for shapes
         this.shapes.floor.arrays.texture_coord.forEach((v, i, l) => {
             v[0] = v[0] * N;
             v[2] = v[2] * N;
@@ -74,6 +76,11 @@ export class Mouse_Maze extends Scene {
             v[0] = v[0] * WALL_WIDTH / CELL_SIZE;
             v[2] = v[2] * WALL_WIDTH / CELL_SIZE;;
         });
+
+        this.shapes.cheese.arrays.texture_coord.forEach((v, i, l) => {
+            v[0] = v[0] * 0.5;
+            v[2] = v[2] * 0.5;
+        })
 
         // Camera overlooking maze
         this.top_down_camera = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
@@ -85,7 +92,9 @@ export class Mouse_Maze extends Scene {
             this.Maze.randomize_maze();
             this.Maze.log_maze();
         });
-        this.key_triggered_button("Randomize cheese position", ['c'], () => this.Maze.randomize_cheese_position());
+        this.key_triggered_button("Randomize cheese position", ['c'], () => {
+            this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
+        });
         this.new_line();
         // Mouse controls
         this.key_triggered_button("Move forward", ['w'], () => {
@@ -142,7 +151,7 @@ export class Mouse_Maze extends Scene {
         let maze_x = 0, maze_y = 0, maze_z = 0;
         let maze_model_transform = Mat4.translation(maze_x, maze_y, maze_z);
 
-        let cheese_float_height = .5*Math.sin(Math.PI*t) + 0.5;
+        let cheese_float_height = .5*Math.sin(Math.PI*t) + 1;
 
         let cheese_light_pos = vec4(this.Maze.cheese_x, maze_y + cheese_float_height, this.Maze.cheese_z, 1);
         let global_light_pos = vec4(this.Maze.SIZE/2, maze_y + 100, this.Maze.SIZE/2, 1);

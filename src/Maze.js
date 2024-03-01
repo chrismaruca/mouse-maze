@@ -18,7 +18,7 @@ export class Maze {
         this.calculate_floor_transform();
         this.calculate_peg_transform();
         this.calculate_wall_transform();
-        this.randomize_cheese_position();
+        this.starting_cheese_position();
 
         this.randomize_maze();
         this.log_maze();
@@ -63,7 +63,7 @@ export class Maze {
 
     calculate_cheese_transform() {
         let CheeseSc = Mat4.scale(0.5, 0.5, 0.5);
-        let CheeseTr = Mat4.translation(this.cheese_x, 1, this.cheese_z);
+        let CheeseTr = Mat4.translation(this.cheese_x, 0, this.cheese_z);
 
         this.cheese_transform = CheeseTr.times(CheeseSc);
     }
@@ -81,6 +81,7 @@ export class Maze {
             neighbor_checked[r] = true;
             let nx = x, nz = z;
 
+            // directions: 0 == +x, 1 == +z, 2 == -x, 3 == -z
             switch(r) {
                 case 0:
                     nx += 1;
@@ -124,9 +125,9 @@ export class Maze {
             visited: new Array(n).fill(0).map(() => new Array(n).fill(false)),
             connected: new Array(n).fill(0).map(() => new Array(n).fill(0).map(() => new Array(4).fill(false)))
         }
-        // directions: 0 == +x, 1 == +z, 2 == -x, 3 == -z
-        maze.visited[0][0] = true;
-        this.recursive_maze_gen(maze, 0, 0);
+        let start_x = get_rand_num(n), start_z = get_rand_num(n);
+        maze.visited[start_x][start_z] = true;
+        this.recursive_maze_gen(maze, start_x, start_z);
 
         this.maze_connections = maze.connected;
     }
@@ -232,22 +233,27 @@ export class Maze {
         }
     }
 
-    // Generates a random position for the cheese in the bottom right of the maze
-    randomize_cheese_position() {
+    // Generates a random position for the cheese in the area defined by the cell coordinates
+    randomize_cheese_position(min_x, max_x, min_z, max_z) {
+        this.cheese_x = (min_x + get_rand_num(max_x - min_x) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
+        this.cheese_z = (min_z + get_rand_num(max_z - min_z) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
+        this.calculate_cheese_transform();
+    }
+
+    // Generates a random starting position for the cheese in the bottom right of the maze
+    starting_cheese_position() {
         let N2f = Math.floor(this.N/2);
         let N2c = Math.ceil(this.N/2);
-        this.cheese_x = (N2f + get_rand_num(N2c) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
-        this.cheese_z = (N2f + get_rand_num(N2c) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
-        this.calculate_cheese_transform();
+        this.randomize_cheese_position(N2f, N2c, N2f, N2c);
     }
 
     draw_cheese(context, program_state) {
         let t = program_state.animation_time / 1000;
-        let float_height = .5*Math.sin(Math.PI*t) + 0.5;
+        let float_height = .5*Math.sin(Math.PI*t) + 1;
         let FloatTr = Mat4.translation(0, float_height, 0);
         let Rot = Mat4.rotation(t*Math.PI/4.0, 0, 1, 0);
 
-        this.scene.shapes.cube.draw(
+        this.scene.shapes.cheese.draw(
             context, program_state, 
             FloatTr.times(this.cheese_transform).times(Rot), 
             this.scene.materials.cheese
