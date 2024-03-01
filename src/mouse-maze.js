@@ -13,29 +13,53 @@ export class Mouse_Maze extends Scene {
         // Shapes
         this.shapes = {
             cube: new defs.Cube(),
+            peg: new defs.Cube(),
+            wall: new defs.Cube(),
+            floor: new defs.Cube(),
             text: new Text_Line(35)
         };
 
+        let phong = new defs.Phong_Shader();
+        let textured_phong = new defs.Textured_Phong();
         // Materials
         this.materials = {
-            blank: new Material(new defs.Phong_Shader(), {ambient: 1, color: color(1,1,1,1)}),
-            light_wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('deb887')}),
-            wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('cdaa7d')}),
-            dark_wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('8b6914')}),
-            text_image: new Material(new defs.Textured_Phong(1), {
+            blank: new Material(phong, {ambient: .2, diffusivity: .8, color: color(1,1,1,1)}),
+            wood: new Material(phong, {ambient: .2, color: hex_color('#cdaa7d')}),
+            wall: new Material(textured_phong, {
+                ambient: .8, diffusivity: .8, specularity: .2,
+                texture: new Texture('../assets/wall.jpg')
+            }),
+            floor: new Material(textured_phong, {
+                ambient: .8, diffusivity: .8, specularity: .2,
+                texture: new Texture('../assets/floor.jpg')}),
+            cheese: new Material(phong, {
+                ambient: .8, diffusivity: 1, specularity: 1,
+                color: hex_color('#FFFF00')
+            }),
+            text_image: new Material(textured_phong, {
                 ambient: 1, diffusivity: 0, specularity: 0,
-                texture: new Texture("assets/text.png")
+                texture: new Texture('../assets/text.png')
             })
         };
 
         // Maze size variables
         let N = 12; // The board is N x N cells large
-        let CELL_SIZE = 3; // Each cell is CELL_SIZE x CELL_SIZE large
+        let CELL_SIZE = 5; // Each cell is CELL_SIZE x CELL_SIZE large
         let WALL_WIDTH = 0.5;
         let SIZE = N * (CELL_SIZE + WALL_WIDTH) + WALL_WIDTH; // Size of the entire maze
         let WALL_HEIGHT = 3; // The height of the walls
 
         this.Maze = new Maze(this, N, CELL_SIZE, WALL_WIDTH, WALL_HEIGHT);
+
+        this.shapes.floor.arrays.texture_coord.forEach((v, i, l) => {
+            v[0] = v[0] * N;
+            v[2] = v[2] * N;
+        });
+        /*
+        this.shapes.peg.arrays.texture_coord.forEach((v, i, l) => {
+            v[0] = v[0] * WALL_WIDTH / CELL_SIZE;
+            v[2] = v[2] * WALL_WIDTH / CELL_SIZE;;
+        });*/
 
         // Camera overlooking maze
         this.initial_camera_location = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
@@ -46,7 +70,7 @@ export class Mouse_Maze extends Scene {
             this.Maze.randomize_maze();
             this.Maze.log_maze();
         });
-        this.key_triggered_button("Randomize cheese position", ["m"], () => this.Maze.randomize_cheese_position());
+        this.key_triggered_button("Randomize cheese position", ["c"], () => this.Maze.randomize_cheese_position());
     }
 
 
@@ -60,10 +84,22 @@ export class Mouse_Maze extends Scene {
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, 1, 100);
         
+        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+
         // Lights
         program_state.lights = [];
+
+        let maze_x = 0, maze_y = 0, maze_z = 0;
+        let maze_model_transform = Mat4.translation(maze_x, maze_y, maze_z);
+
+        let cheese_float_height = .5*Math.sin(Math.PI*t) + 0.5;
+
+        let cheese_light_pos = vec4(this.Maze.cheese_x, maze_y + cheese_float_height, this.Maze.cheese_z, 1);
+        let global_light_pos = vec4(this.Maze.SIZE/2, maze_y + 100, this.Maze.SIZE/2, 1);
+        program_state.lights.push(new Light(cheese_light_pos, hex_color('#FFFF00'), 100));
+        program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
         
-        this.Maze.draw_maze(context, program_state, Mat4.identity());
+        this.Maze.draw_maze(context, program_state, maze_model_transform);
         this.Maze.draw_cheese(context, program_state);
     }
 }

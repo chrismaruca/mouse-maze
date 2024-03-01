@@ -154,35 +154,35 @@ export class Maze {
 
     draw_peg(context, program_state, model_transform) {
         // Draw the peg
-        this.scene.shapes.cube.draw(
+        this.scene.shapes.peg.draw(
             context, program_state,
             model_transform.times(this.peg_transform), 
-            this.scene.materials.wood
+            this.scene.materials.wall
         );
     }
 
     draw_wall(context, program_state, model_transform, x_dir) {
         // Draw the wall
         if (x_dir) {
-            this.scene.shapes.cube.draw(
+            this.scene.shapes.wall.draw(
                 context, program_state,
                 model_transform.times(this.wall_transform_x), 
-                this.scene.materials.light_wood
+                this.scene.materials.wall
             );
         } else {
-            this.scene.shapes.cube.draw(
+            this.scene.shapes.wall.draw(
                 context, program_state,
                 model_transform.times(this.wall_transform_z), 
-                this.scene.materials.light_wood
+                this.scene.materials.wall
             );
         }
     }
 
     draw_floor(context, program_state, model_transform) {    
-        this.scene.shapes.cube.draw(
+        this.scene.shapes.floor.draw(
             context, program_state,
             model_transform.times(this.floor_transform),
-            this.scene.materials.dark_wood
+            this.scene.materials.floor
         );
     }
 
@@ -240,10 +240,15 @@ export class Maze {
     }
 
     draw_cheese(context, program_state) {
+        let t = program_state.animation_time / 1000;
+        let float_height = .5*Math.sin(Math.PI*t) + 0.5;
+        let FloatTr = Mat4.translation(0, float_height, 0);
+        let Rot = Mat4.rotation(t*Math.PI/4.0, 0, 1, 0);
+
         this.scene.shapes.cube.draw(
             context, program_state, 
-            this.cheese_transform, 
-            this.scene.materials.wood.override({color: hex_color('#FFFF00')})
+            FloatTr.times(this.cheese_transform).times(Rot), 
+            this.scene.materials.cheese
         );
     }
 }
