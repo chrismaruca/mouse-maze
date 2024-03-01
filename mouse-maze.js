@@ -1,8 +1,51 @@
 import {defs, tiny} from './common.js';
 
 const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
+    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
+
+// From text-demo.js
+export class Text_Line extends Shape {                           // **Text_Line** embeds text in the 3D world, using a crude texture
+                                                                 // method.  This Shape is made of a horizontal arrangement of quads.
+                                                                 // Each is textured over with images of ASCII characters, spelling
+                                                                 // out a string.  Usage:  Instantiate the Shape with the desired
+                                                                 // character line width.  Then assign it a single-line string by calling
+                                                                 // set_string("your string") on it. Draw the shape on a material
+                                                                 // with full ambient weight, and text.png assigned as its texture
+                                                                 // file.  For multi-line strings, repeat this process and draw with
+                                                                 // a different matrix.
+    constructor(max_size) {
+        super("position", "normal", "texture_coord");
+        this.max_size = max_size;
+        var object_transform = Mat4.identity();
+        for (var i = 0; i < max_size; i++) {                                       // Each quad is a separate Square instance:
+            defs.Square.insert_transformed_copy_into(this, [], object_transform);
+            object_transform.post_multiply(Mat4.translation(1.5, 0, 0));
+        }
+    }
+
+    set_string(line, context) {           // set_string():  Call this to overwrite the texture coordinates buffer with new
+        // values per quad, which enclose each of the string's characters.
+        this.arrays.texture_coord = [];
+        for (var i = 0; i < this.max_size; i++) {
+            var row = Math.floor((i < line.length ? line.charCodeAt(i) : ' '.charCodeAt()) / 16),
+                col = Math.floor((i < line.length ? line.charCodeAt(i) : ' '.charCodeAt()) % 16);
+
+            var skip = 3, size = 32, sizefloor = size - skip;
+            var dim = size * 16,
+                left = (col * size + skip) / dim, top = (row * size + skip) / dim,
+                right = (col * size + sizefloor) / dim, bottom = (row * size + sizefloor + 5) / dim;
+
+            this.arrays.texture_coord.push(...Vector.cast([left, 1 - bottom], [right, 1 - bottom],
+                [left, 1 - top], [right, 1 - top]));
+        }
+        if (!this.existing) {
+            this.copy_onto_graphics_card(context);
+            this.existing = true;
+        } else
+            this.copy_onto_graphics_card(context, ["texture_coord"], false);
+    }
+}
 
 export class Mouse_Maze extends Scene {
     constructor() {
@@ -11,6 +54,7 @@ export class Mouse_Maze extends Scene {
         // Shapes
         this.shapes = {
             cube: new defs.Cube(),
+            text: new Text_Line(35)
         };
 
         // Materials
@@ -18,7 +62,11 @@ export class Mouse_Maze extends Scene {
             blank: new Material(new defs.Phong_Shader(), {ambient: 1, color: color(1,1,1,1)}),
             light_wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('deb887')}),
             wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('cdaa7d')}),
-            dark_wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('8b6914')})
+            dark_wood: new Material(new defs.Phong_Shader(), {ambient: 1, color: hex_color('8b6914')}),
+            text_image: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/text.png")
+            })
         };
 
         this.N = 12; // The board is N x N cells large
@@ -28,6 +76,11 @@ export class Mouse_Maze extends Scene {
 
         // Camera overlooking maze
         this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
+
+        // Mouse initial matrix
+        this.mouse_matrix = Mat4.translation(this.CELL_SIZE/2, 1, this.CELL_SIZE/2)
+                            .times(Mat4.scale(0.5, 0.5, 0.5))
+                            .times(Mat4.translation(1, 1, 1));
     }
         
     // Returns number between 0 to max-1
@@ -138,7 +191,7 @@ export class Mouse_Maze extends Scene {
         let TrXDir = Mat4.translation(this.CELL_SIZE, 0, 0);
         let TrZDir = Mat4.translation(0, 0, this.CELL_SIZE);
 
-        // For the pegs
+        // Transformations for the pegs
         let PegSc = Mat4.scale(0.5, this.HEIGHT, 0.5);
         peg_model_transform = peg_model_transform.times(TrUp).times(PegSc).times(OriginTr);
 
@@ -152,7 +205,7 @@ export class Mouse_Maze extends Scene {
             peg_model_transform = TrXDir.times(peg_model_transform);
         }
 
-        // Translations for the walls
+        // Transformations for the walls
         let XWallSc = Mat4.scale((this.CELL_SIZE-1)*0.5, this.HEIGHT, 0.5);
         let ZWallSc = Mat4.scale(0.5, this.HEIGHT, (this.CELL_SIZE-1)*0.5);
         let XWallAdj = Mat4.translation(1, 0, 0);
@@ -217,12 +270,16 @@ export class Mouse_Maze extends Scene {
         */
     }
 
+    draw_mouse(context, program_state) {
+        this.shapes.cube.draw(context, program_state, this.mouse_matrix, this.materials.blank);
+    }
+
     display(context, program_state) {
         // Initial setup
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             program_state.set_camera(this.initial_camera_location);
-            
+
             this.maze = this.generate_maze_connections();
             this.log_maze(this.maze);
         }
@@ -234,6 +291,11 @@ export class Mouse_Maze extends Scene {
         program_state.lights = [];
         
         this.draw_floor(context, program_state);
-        this.draw_maze(context, program_state)
+        this.draw_maze(context, program_state);
+        this.draw_mouse(context, program_state);
+
+        // Draw text object
+        this.shapes.text.set_string("Mouse Maze test string", context.context);
+        this.shapes.text.draw(context, program_state, Mat4.translation(0, 10, 0), this.materials.text_image);
     }
 }
