@@ -232,10 +232,12 @@ export class Maze {
         }
     }
 
-    // Generates a random position for the cheese
+    // Generates a random position for the cheese in the bottom right of the maze
     randomize_cheese_position() {
-        this.cheese_x = (this.N/2 + get_rand_num(this.N/2) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
-        this.cheese_z = (this.N/2 + get_rand_num(this.N/2) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
+        let N2f = Math.floor(this.N/2);
+        let N2c = Math.ceil(this.N/2);
+        this.cheese_x = (N2f + get_rand_num(N2c) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
+        this.cheese_z = (N2f + get_rand_num(N2c) + 0.5) * (this.CELL_SIZE + this.WALL_WIDTH) + 0.25;
         this.calculate_cheese_transform();
     }
 
