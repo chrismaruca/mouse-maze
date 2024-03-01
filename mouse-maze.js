@@ -29,7 +29,11 @@ export class Mouse_Maze extends Scene {
         // Camera overlooking maze
         this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
     }
-        
+
+    make_control_panel() {
+        this.key_triggered_button("Regenerate maze", ["m"], () => this.maze = this.generate_maze_connections());
+    }
+
     // Returns number between 0 to max-1
     get_rand_num(max) {
         return Math.floor(Math.random() * max);
@@ -138,7 +142,7 @@ export class Mouse_Maze extends Scene {
         let TrXDir = Mat4.translation(this.CELL_SIZE, 0, 0);
         let TrZDir = Mat4.translation(0, 0, this.CELL_SIZE);
 
-        // For the pegs
+        // Transformations for the pegs
         let PegSc = Mat4.scale(0.5, this.HEIGHT, 0.5);
         peg_model_transform = peg_model_transform.times(TrUp).times(PegSc).times(OriginTr);
 
@@ -152,7 +156,7 @@ export class Mouse_Maze extends Scene {
             peg_model_transform = TrXDir.times(peg_model_transform);
         }
 
-        // Translations for the walls
+        // Transformations for the walls
         let XWallSc = Mat4.scale((this.CELL_SIZE-1)*0.5, this.HEIGHT, 0.5);
         let ZWallSc = Mat4.scale(0.5, this.HEIGHT, (this.CELL_SIZE-1)*0.5);
         let XWallAdj = Mat4.translation(1, 0, 0);
@@ -191,35 +195,11 @@ export class Mouse_Maze extends Scene {
         
         floor_model_transform = floor_model_transform.times(FloorSc).times(OriginTr);
         this.shapes.cube.draw(context, program_state, floor_model_transform, this.materials.dark_wood);
-        /*
-        // Outer walls
-        let plank_model_transform = Mat4.identity();
-
-        let PlankScDown = Mat4.scale(0.5, 0.5, 0.5);
-        let PlankSc = Mat4.scale(this.SIZE, 5, 0.5);
-        let PlankTrUp = Mat4.translation(0, 1, 0);
-        let PlankRt = Mat4.rotation(-Math.PI / 2, 0, 1, 0);
-        let PlankXAdj = Mat4.translation(0.5, 0, 0);
-        let PlankZAdj = Mat4.translation(0, 0, -0.5);
-        let PlankXTr = Mat4.translation(this.SIZE, 0, 0);
-        let PlankZTr = Mat4.translation(0, 0, this.SIZE);
-
-        plank_model_transform = plank_model_transform.times(PlankTrUp).times(PlankSc).times(PlankScDown).times(OriginTr);
-
-        // Top wall z = 0
-        this.shapes.cube.draw(context, program_state, plank_model_transform, this.materials.light_wood);
-        // Left wall x = 0
-        this.shapes.cube.draw(context, program_state, PlankXAdj.times(PlankRt).times(plank_model_transform), this.materials.light_wood)
-        // Right wall x = SIZE
-        this.shapes.cube.draw(context, program_state, PlankXTr.times(PlankRt).times(plank_model_transform), this.materials.light_wood)
-        // Bottom wall z = SIZE
-        this.shapes.cube.draw(context, program_state, PlankZAdj.times(PlankZTr).times(plank_model_transform), this.materials.light_wood);
-        */
     }
 
     display(context, program_state) {
         // Initial setup
-        if (!context.scratchpad.controls) {
+        if (!this.maze) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             program_state.set_camera(this.initial_camera_location);
             
@@ -234,6 +214,6 @@ export class Mouse_Maze extends Scene {
         program_state.lights = [];
         
         this.draw_floor(context, program_state);
-        this.draw_maze(context, program_state)
+        this.draw_maze(context, program_state);
     }
 }
