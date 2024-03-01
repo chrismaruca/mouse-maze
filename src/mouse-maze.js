@@ -28,6 +28,7 @@ export class Mouse_Maze extends Scene {
             })
         };
 
+        // Maze size variables
         let N = 12; // The board is N x N cells large
         let CELL_SIZE = 3; // Each cell is CELL_SIZE x CELL_SIZE large
         let WALL_WIDTH = 0.5;
