@@ -74,13 +74,13 @@ export class Mouse_Maze extends Scene {
         
         this.shapes.peg.arrays.texture_coord.forEach((v, i, l) => {
             v[0] = v[0] * WALL_WIDTH / CELL_SIZE;
-            v[2] = v[2] * WALL_WIDTH / CELL_SIZE;;
+            v[2] = v[2] * WALL_WIDTH / CELL_SIZE;
         });
 
         this.shapes.cheese.arrays.texture_coord.forEach((v, i, l) => {
             v[0] = v[0] * 0.5;
             v[2] = v[2] * 0.5;
-        })
+        });
 
         // Camera overlooking maze
         this.top_down_camera = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
