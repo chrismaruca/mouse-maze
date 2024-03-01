@@ -1,5 +1,5 @@
 import {defs, tiny} from './common.js';
-import {Mouse_Maze} from "./mouse-maze.js";
+import {Mouse_Maze} from "./src/mouse-maze.js";
 
 // Pull these names into this module's scope for convenience:
 const {
