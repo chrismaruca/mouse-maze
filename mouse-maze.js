@@ -5,7 +5,7 @@ const {
 } = tiny;
 
 // From text-demo.js
-export class Text_Line extends Shape {                           // **Text_Line** embeds text in the 3D world, using a crude texture
+class Text_Line extends Shape {                           // **Text_Line** embeds text in the 3D world, using a crude texture
                                                                  // method.  This Shape is made of a horizontal arrangement of quads.
                                                                  // Each is textured over with images of ASCII characters, spelling
                                                                  // out a string.  Usage:  Instantiate the Shape with the desired
@@ -76,11 +76,6 @@ export class Mouse_Maze extends Scene {
 
         // Camera overlooking maze
         this.initial_camera_location =  Mat4.look_at(vec3(this.SIZE/2, 70, this.SIZE*3/5), vec3(this.SIZE/2, 0, this.SIZE/2), vec3(0, 1, 0));
-
-        // Mouse initial matrix
-        this.mouse_matrix = Mat4.translation(this.CELL_SIZE/2, 1, this.CELL_SIZE/2)
-                            .times(Mat4.scale(0.5, 0.5, 0.5))
-                            .times(Mat4.translation(1, 1, 1));
     }
         
     // Returns number between 0 to max-1
@@ -270,10 +265,6 @@ export class Mouse_Maze extends Scene {
         */
     }
 
-    draw_mouse(context, program_state) {
-        this.shapes.cube.draw(context, program_state, this.mouse_matrix, this.materials.blank);
-    }
-
     display(context, program_state) {
         // Initial setup
         if (!context.scratchpad.controls) {
@@ -292,7 +283,6 @@ export class Mouse_Maze extends Scene {
         
         this.draw_floor(context, program_state);
         this.draw_maze(context, program_state);
-        this.draw_mouse(context, program_state);
 
         // Draw text object
         this.shapes.text.set_string("Mouse Maze test string", context.context);
