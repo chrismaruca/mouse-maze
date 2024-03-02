@@ -197,10 +197,6 @@ export class Mouse_Maze extends Scene {
             this.Mouse.draw_mouse(context, program_state);
         }
 
-      // let count = 0;
-        //Counter functionality
-        // this.shapes.text.set_string("COUNTER", context.context);
-        // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
 
         //if mouse touched the object -> randomize cheese object & increase count
         if(Math.floor(this.Mouse.pos[0] - this.Maze.cheese_x) === 0 && Math.floor(this.Mouse.pos[2] - this.Maze.cheese_z) === 0){
@@ -212,23 +208,23 @@ export class Mouse_Maze extends Scene {
         //Visually Display Count:
         let countDisplay = "COUNTER: " + this.count;
         this.shapes.text.set_string(countDisplay, context.context);
-        this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
-
-
-        //console.log(this.Maze.calculate_cheese_transform);
-       //console.log(this.Maze.cheese_transform);
-       // console.log(this.Maze.cheese_x);
+       // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
 
 
 
-        // this.Maze.draw_maze(context, program_state, maze_model_transform);
-        // program_state.set_camera(this.top_down_camera);
-       //  this.Maze.draw_cheese(context, program_state);
-       // this.Mouse.move(dt);
-       // this.Mouse.draw_mouse(context, program_state);
+
+// Update the translation matrix for drawing the text based on the player's position
+        let player_position = this.Mouse.pos;
+        let text_translation = Mat4.translation(player_position[0], player_position[1]+1, player_position[2] + 1);
+
+// Draw the text with the updated translation matrix
+        this.shapes.text.draw(context, program_state, text_translation, this.materials.text_image);
 
 
-        
+
+
+
+
         if (this.top_down_enabled) {
             program_state.set_camera(this.top_down_camera);
         } else {
