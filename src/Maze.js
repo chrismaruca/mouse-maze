@@ -244,7 +244,7 @@ export class Maze {
     starting_cheese_position() {
         let N2f = Math.floor(this.N/2);
         let N2c = Math.ceil(this.N/2);
-        this.randomize_cheese_position(N2f, N2c, N2f, N2c);
+        this.randomize_cheese_position(N2f, N2f+N2c, N2f, N2f+N2c);
     }
 
     draw_cheese(context, program_state) {
