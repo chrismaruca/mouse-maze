@@ -85,6 +85,26 @@ export class Mouse_Maze extends Scene {
         // Camera overlooking maze
         this.top_down_camera = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
         this.top_down_enabled = false;
+        this.pressedStart = false;
+
+        //start game functionality
+        this.startMenu = document.getElementById("start-menu");
+        this.welcomeText = document.getElementById("welcome-message");
+        this.start_button = document.getElementById("start-button");
+
+        //text inside message
+        this.welcomeText.textContent = "Mouse Maze";
+        this.welcomeText.style.color = "red";
+        this.start_button.textContent = "New Game";
+
+        this.start_button.onclick = () => {
+            this.pressedStart = true;
+            this.startMenu.style.display = 'none';
+        };
+
+
+
+
     }
 
     make_control_panel() {
@@ -132,12 +152,19 @@ export class Mouse_Maze extends Scene {
         }, undefined, () => {
             this.top_down_enabled = false;
         });
+        //added for start menu
+        // this.key_triggered_button("Start Game", ['S'], () => {
+        //    // pressed;
+        // }, undefined, () => {
+        //     this.pressedStart = true;
+        // });
     }
 
     display(context, program_state) {
         // Initial setup
         if (!context.scratchpad.controls) {
             //this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+
         }
         // Projection matrix
         program_state.projection_transform = Mat4.perspective(
@@ -157,11 +184,27 @@ export class Mouse_Maze extends Scene {
         let global_light_pos = vec4(this.Maze.SIZE/2, maze_y + 100, this.Maze.SIZE/2, 1);
         program_state.lights.push(new Light(cheese_light_pos, hex_color('#FFFF00'), 100));
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
-        
-        this.Maze.draw_maze(context, program_state, maze_model_transform);
-        this.Maze.draw_cheese(context, program_state);
-        this.Mouse.move(dt);
-        this.Mouse.draw_mouse(context, program_state);
+
+
+        //START MENU
+        //this.shapes.text.set_string("START GAME", context.context);
+       // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
+
+       if (this.pressedStart) {
+            this.Maze.draw_maze(context, program_state, maze_model_transform);
+            this.Maze.draw_cheese(context, program_state);
+            this.Mouse.move(dt);
+            this.Mouse.draw_mouse(context, program_state);
+        }
+
+
+        // this.Maze.draw_maze(context, program_state, maze_model_transform);
+        // program_state.set_camera(this.top_down_camera);
+       //  this.Maze.draw_cheese(context, program_state);
+       // this.Mouse.move(dt);
+       // this.Mouse.draw_mouse(context, program_state);
+
+
         
         if (this.top_down_enabled) {
             program_state.set_camera(this.top_down_camera);
