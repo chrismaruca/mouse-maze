@@ -35,6 +35,10 @@ export class Mouse {
             this.vel[2] * Math.cos(this.angle) - this.vel[0] * Math.sin(this.angle));
         this.pos = this.pos.plus(rotated_vel.times(dt));
     }
+   //get current position of mouse
+   //  currentPos() {
+   //      return this.pos;
+   //  }
 
     draw_mouse(context, program_state) {
         // Make mouse a 1x1x1 cube

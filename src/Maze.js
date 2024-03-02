@@ -13,6 +13,7 @@ export class Maze {
         this.WALL_WIDTH = wall_width;
         this.SIZE = this.N * (this.CELL_SIZE + this.WALL_WIDTH) + this.WALL_WIDTH; // Size of the entire maze
         this.HEIGHT = wall_height; // The height of the walls
+        //this.cheese_transform = 1;
 
         this.calculate_cheese_transform();
         this.calculate_floor_transform();

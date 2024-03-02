@@ -102,6 +102,9 @@ export class Mouse_Maze extends Scene {
             this.startMenu.style.display = 'none';
         };
 
+        //count how many cheese currently obtained
+        this.count = 0;
+
 
 
 
@@ -186,9 +189,6 @@ export class Mouse_Maze extends Scene {
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
 
 
-        //START MENU
-        //this.shapes.text.set_string("START GAME", context.context);
-       // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
 
        if (this.pressedStart) {
             this.Maze.draw_maze(context, program_state, maze_model_transform);
@@ -196,6 +196,29 @@ export class Mouse_Maze extends Scene {
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
         }
+
+      // let count = 0;
+        //Counter functionality
+        // this.shapes.text.set_string("COUNTER", context.context);
+        // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
+
+        //if mouse touched the object -> randomize cheese object & increase count
+        if(Math.floor(this.Mouse.pos[0] - this.Maze.cheese_x) === 0 && Math.floor(this.Mouse.pos[2] - this.Maze.cheese_z) === 0){
+            this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
+            this.count += 1;
+            console.log(this.count);
+        }
+
+        //Visually Display Count:
+        let countDisplay = "COUNTER: " + this.count;
+        this.shapes.text.set_string(countDisplay, context.context);
+        this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
+
+
+        //console.log(this.Maze.calculate_cheese_transform);
+       //console.log(this.Maze.cheese_transform);
+       // console.log(this.Maze.cheese_x);
+
 
 
         // this.Maze.draw_maze(context, program_state, maze_model_transform);
@@ -211,6 +234,7 @@ export class Mouse_Maze extends Scene {
         } else {
             program_state.set_camera(
                 Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0))
+                //console.log(5);
             );
         }
     }
