@@ -107,8 +107,7 @@ export class Mouse_Maze extends Scene {
         this.count = 0;
 
         this.mouse_camera = null;
-
-
+        //this.blending_factor = [1, 0.01, 1, 1];
     }
 
     make_control_panel() {
@@ -156,6 +155,9 @@ export class Mouse_Maze extends Scene {
         }, undefined, () => {
             this.top_down_enabled = false;
         });
+        this.key_triggered_button("Fullscreen", ['f'], () => {
+            document.getElementsByTagName('canvas')[0].requestFullscreen();
+        });
         //added for start menu
         // this.key_triggered_button("Start Game", ['S'], () => {
         //    // pressed;
@@ -196,31 +198,33 @@ export class Mouse_Maze extends Scene {
             this.Maze.draw_cheese(context, program_state);
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
+            this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
 
             if (this.top_down_enabled) {
+                //program_state.set_camera(this.top_down_camera.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, this.blending_factor[i])));
                 program_state.set_camera(this.top_down_camera);
             } else {
-                this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
-                program_state.set_camera(
-                    this.mouse_camera
-                );
+                //program_state.set_camera(this.mouse_camera.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, this.blending_factor)));
+                program_state.set_camera(this.mouse_camera);
+
+                // Visually display the counter in the top left of the screen when in first-person view
+                let countDisplay = "Cheese: " + this.count;
+                this.shapes.text.set_string(countDisplay, context.context);
+                let counter_transform = Mat4.inverse(this.mouse_camera)
+                    .times(Mat4.translation(-11.0/16, 6.0/16, -1))
+                    .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+                this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
+
+                let timerDisplay = "Time: " + (t - this.start_time);
+                let timer_transform = Mat4.inverse(this.mouse_camera)
+                    .times(Mat4.translation(-11.0/16, 5.0/16, -1))
+                    .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+                this.shapes.timer.set_string(timerDisplay, context.context);
+                this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
             }
             
 
-            // Visually display the counter in the top left of the screen
-            let countDisplay = "Cheese: " + this.count;
-            this.shapes.text.set_string(countDisplay, context.context);
-            let counter_transform = Mat4.inverse(this.mouse_camera)
-                .times(Mat4.translation(-11.0/16, 6.0/16, -1))
-                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
-            this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
-
-            let timerDisplay = "Time: " + (t - this.start_time);
-            let timer_transform = Mat4.inverse(this.mouse_camera)
-                .times(Mat4.translation(-11.0/16, 5.0/16, -1))
-                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
-            this.shapes.timer.set_string(timerDisplay, context.context);
-            this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
+            
        }
        else {
         this.start_time = t;
