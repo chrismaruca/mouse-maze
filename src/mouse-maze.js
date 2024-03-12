@@ -18,7 +18,8 @@ export class Mouse_Maze extends Scene {
             peg: new defs.Cube(),
             wall: new defs.Cube(),
             floor: new defs.Cube(),
-            text: new Text_Line(35)
+            text: new Text_Line(35),
+            timer: new Text_Line(35)
         };
 
         // Shaders
@@ -105,7 +106,7 @@ export class Mouse_Maze extends Scene {
         //count how many cheese currently obtained
         this.count = 0;
 
-
+        this.mouse_camera = null;
 
 
     }
@@ -195,7 +196,37 @@ export class Mouse_Maze extends Scene {
             this.Maze.draw_cheese(context, program_state);
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
-        }
+
+            if (this.top_down_enabled) {
+                program_state.set_camera(this.top_down_camera);
+            } else {
+                this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
+                program_state.set_camera(
+                    this.mouse_camera
+                );
+            }
+            
+
+            // Visually display the counter in the top left of the screen
+            let countDisplay = "Cheese: " + this.count;
+            this.shapes.text.set_string(countDisplay, context.context);
+            let counter_transform = Mat4.inverse(this.mouse_camera)
+                .times(Mat4.translation(-11.0/16, 6.0/16, -1))
+                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+            this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
+
+            let timerDisplay = "Time: " + (t - this.start_time);
+            let timer_transform = Mat4.inverse(this.mouse_camera)
+                .times(Mat4.translation(-11.0/16, 5.0/16, -1))
+                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+            this.shapes.timer.set_string(timerDisplay, context.context);
+            this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
+       }
+       else {
+        this.start_time = t;
+       }
+
+        
 
       // let count = 0;
         //Counter functionality
@@ -209,10 +240,7 @@ export class Mouse_Maze extends Scene {
             console.log(this.count);
         }
 
-        //Visually Display Count:
-        let countDisplay = "COUNTER: " + this.count;
-        this.shapes.text.set_string(countDisplay, context.context);
-        this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
+        
 
 
         //console.log(this.Maze.calculate_cheese_transform);
@@ -229,13 +257,6 @@ export class Mouse_Maze extends Scene {
 
 
         
-        if (this.top_down_enabled) {
-            program_state.set_camera(this.top_down_camera);
-        } else {
-            program_state.set_camera(
-                Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0))
-                //console.log(5);
-            );
-        }
+        
     }
 }
