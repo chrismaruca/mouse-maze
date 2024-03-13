@@ -103,6 +103,44 @@ export class Mouse_Maze extends Scene {
             this.startMenu.style.display = 'none';
         };
 
+        //play again button
+        this.playAgain_button = document.getElementById("startAgain-button");
+        this.playAgain_button.onclick = () => {
+            this.pressedStart = true;
+            this.endGame = false;
+            this.startMenu.style.display = 'none';
+            this.gameDoneMenu.style.display = 'none';
+            this.count = 0; //reset the count
+        };
+
+        //quit game button
+        this.quit_button = document.getElementById("quit-button");
+        this.quit_button.onclick = () => {
+            this.pressedStart = false;
+            this.endGame = false;
+            this.startMenu.style.display = 'block';
+            this.gameDoneMenu.style.display = 'none';
+            this.count = 0 //reset the count
+        };
+        //end game menu
+        this.gameDoneMenu = document.getElementById("gameDone-menu");
+        this.gameDoneMessage = document.getElementById("gameDone-message");
+        this.gameTime = document.getElementById("timer");
+        this.gamePersonalScore = document.getElementById("personal-Score");
+
+
+        this.gameDoneMessage.textContent = "Your Score/Stats:";
+        this.gameDoneMessage.style.color = "red";
+        this.gameTime.style.color = "red";
+        this.gamePersonalScore.style.color = "red";
+
+
+        //initially make it not show
+            //COME BACK TO: WEIRD RENDERING
+        this.gameDoneMenu.style.display = 'none';
+        this.endGame = false;
+
+
         //count how many cheese currently obtained
         this.count = 0;
 
@@ -193,6 +231,13 @@ export class Mouse_Maze extends Scene {
 
         const GAME_LENGTH = 20;
 
+        // //if mouse touched the object -> randomize cheese object & increase count
+        // if(Math.floor(this.Mouse.pos[0] - this.Maze.cheese_x) === 0 && Math.floor(this.Mouse.pos[2] - this.Maze.cheese_z) === 0){
+        //     this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
+        //     this.count += 1;
+        //     console.log(this.count);
+        // }
+
        if (this.pressedStart) {
             this.Maze.draw_maze(context, program_state, maze_model_transform);
             this.Maze.draw_cheese(context, program_state);
@@ -231,15 +276,27 @@ export class Mouse_Maze extends Scene {
             //if currentTime less than or equal to 0.  END GAME
            if (currentTime <= 0) {
                // Reset cheese count
-               this.count = 0;
+               //this.count = 0;
                // End the game
                this.pressedStart = false;
+               //this.gameDoneMenu.style.display = 'block'; //show end game menu
+               this.endGame = true;
            }
 
             
        }
        else {
         this.start_time = t;
+       }
+       //if the game finished
+       if(this.endGame){
+           //end game functionality
+           this.gameDoneMenu.style.display = 'block';
+           this.gameTime.textContent = "Game Length: " + GAME_LENGTH + " seconds";
+           this.gamePersonalScore.textContent = "Score: " + this.count;
+
+           console.log(this.count, "count: ")
+
        }
 
         
