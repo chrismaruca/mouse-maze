@@ -191,7 +191,7 @@ export class Mouse_Maze extends Scene {
         program_state.lights.push(new Light(cheese_light_pos, hex_color('#FFFF00'), 100));
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
 
-
+        const GAME_LENGTH = 20;
 
        if (this.pressedStart) {
             this.Maze.draw_maze(context, program_state, maze_model_transform);
@@ -215,14 +215,26 @@ export class Mouse_Maze extends Scene {
                     .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
                 this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
 
-                let timerDisplay = "Time: " + (t - this.start_time);
+                //make timer count down
+                var currentTime = (GAME_LENGTH - (t - this.start_time)).toFixed(1);
+                let timerDisplay = "Time: " + currentTime;
+               // timerDisplay = timerDisplay.toFixed(1);
+                console.log("timer:", timerDisplay)
+
                 let timer_transform = Mat4.inverse(this.mouse_camera)
                     .times(Mat4.translation(-11.0/16, 5.0/16, -1))
                     .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
                 this.shapes.timer.set_string(timerDisplay, context.context);
                 this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
             }
-            
+
+            //if currentTime less than or equal to 0.  END GAME
+           if (currentTime <= 0) {
+               // Reset cheese count
+               this.count = 0;
+               // End the game
+               this.pressedStart = false;
+           }
 
             
        }
