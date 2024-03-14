@@ -8,6 +8,7 @@ export class Mouse {
     constructor(scene, start_pos, speed) {
         this.scene = scene;
         // Position of the mouse
+        this.start_pos = start_pos;
         this.pos = start_pos;
         // Mouse viewing angle
         this.angle = 0;
@@ -17,6 +18,8 @@ export class Mouse {
         this.rotv = 0;
         // Mouse movement speed
         this.speed = speed;
+
+        this.model_size = vec3(1, 1, 1);
     }
 
     eye_vec() {
@@ -54,5 +57,10 @@ export class Mouse {
             mouse_matrix,
             this.scene.materials.mouse
         );
+    }
+
+    reset() {
+        this.pos = this.start_pos;
+        this.angle = 0;
     }
 }

@@ -1,65 +1,30 @@
 import {defs, tiny} from '../common.js';
-import {get_rand_num} from './utils.js'
+import {get_rand_num} from './utils.js';
+import { Floor, Wall, Peg } from './Objects.js';
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
 
 export class Maze {
-    constructor(scene, cell_n, cell_size, wall_width, wall_height) {
+    constructor(scene, cell_n, cell_size, wall_width, wall_height, start_pos) {
         this.scene = scene;
         this.N = cell_n; // The board is N x N cells large
         this.CELL_SIZE = cell_size; // Each cell is CELL_SIZE x CELL_SIZE large
         this.WALL_WIDTH = wall_width;
         this.SIZE = this.N * (this.CELL_SIZE + this.WALL_WIDTH) + this.WALL_WIDTH; // Size of the entire maze
         this.HEIGHT = wall_height; // The height of the walls
+        this.pos = start_pos;
         //this.cheese_transform = 1;
 
+        // Array of maze objects
+        this.objects = [];
+
         this.calculate_cheese_transform();
-        this.calculate_floor_transform();
-        this.calculate_peg_transform();
-        this.calculate_wall_transform();
         this.starting_cheese_position();
 
         this.randomize_maze();
         this.log_maze();
-    }
-
-    calculate_peg_transform() {
-        // Make sure corner of object is at origin before scaling
-        let OriginTr = Mat4.translation(1, 1, 1);
-        // Scale object down to a 1x1x1 cube before applying other scaling
-        let ShrinkSc = Mat4.scale(0.5, 0.5, 0.5);
-        // Peg scaling matrix
-        let PegSc = Mat4.scale(this.WALL_WIDTH, this.HEIGHT, this.WALL_WIDTH);
-
-        this.peg_transform = PegSc.times(ShrinkSc).times(OriginTr)
-    }
-
-    calculate_wall_transform() {
-        // Make sure corner of wall is at origin before scaling
-        let OriginTr = Mat4.translation(1, 1, 1);
-        // Scale object down to a 1x1x1 cube before applying other scaling
-        let ShrinkSc = Mat4.scale(0.5, 0.5, 0.5);
-        // Wall scaling matrix
-        let WallScX = Mat4.scale(this.CELL_SIZE, this.HEIGHT, this.WALL_WIDTH);
-        let WallScZ = Mat4.scale(this.WALL_WIDTH, this.HEIGHT, this.CELL_SIZE);
-
-        this.wall_transform_x = WallScX.times(ShrinkSc).times(OriginTr);
-        this.wall_transform_z = WallScZ.times(ShrinkSc).times(OriginTr);
-    }
-
-    calculate_floor_transform() {
-        // Make sure corner of floor is at origin before scaling
-        let OriginTr = Mat4.translation(1, 1, 1);
-        // Scale object down to a 1x1x1 cube before applying other scaling
-        let ShrinkSc = Mat4.scale(0.5, 0.5, 0.5);
-        // Floor scaling matrix
-        let FloorSc = Mat4.scale(this.SIZE, 1, this.SIZE);
-        // Translate floor down 1 unit
-        let FloorTr = Mat4.translation(0, -1, 0);
-
-        this.floor_transform = FloorTr.times(FloorSc).times(ShrinkSc).times(OriginTr);
     }
 
     calculate_cheese_transform() {
@@ -131,8 +96,12 @@ export class Maze {
         this.recursive_maze_gen(maze, start_x, start_z);
 
         this.maze_connections = maze.connected;
+        
+        // Construct the maze
+        this.construct_maze();
     }
 
+    // Print the maze configuration to the console
     log_maze() {
         let out = "";
         for (let z = 0; z < this.N; z++) {
@@ -154,83 +123,67 @@ export class Maze {
         console.log(out);
     }
 
-    draw_peg(context, program_state, model_transform) {
-        // Draw the peg
-        this.scene.shapes.peg.draw(
-            context, program_state,
-            model_transform.times(this.peg_transform), 
-            this.scene.materials.wall
-        );
-    }
+    construct_maze() {
+        // Reset the maze
+        this.objects = [];
 
-    draw_wall(context, program_state, model_transform, x_dir) {
-        // Draw the wall
-        if (x_dir) {
-            this.scene.shapes.wall.draw(
-                context, program_state,
-                model_transform.times(this.wall_transform_x), 
-                this.scene.materials.wall
-            );
-        } else {
-            this.scene.shapes.wall.draw(
-                context, program_state,
-                model_transform.times(this.wall_transform_z), 
-                this.scene.materials.wall
-            );
-        }
-    }
-
-    draw_floor(context, program_state, model_transform) {    
-        this.scene.shapes.floor.draw(
-            context, program_state,
-            model_transform.times(this.floor_transform),
-            this.scene.materials.floor
-        );
-    }
-
-    draw_maze(context, program_state, model_transform) {
-        // Draw floor
-        this.draw_floor(context, program_state, model_transform);
+        // Create floor
+        this.objects.push(new Floor(this.scene, vec3(this.SIZE, 1, this.SIZE), vec3(0, -1, 0)));
 
         // Draw pegs
-        let z_translation = model_transform;
+        let z_pos = this.pos[2];
         for (let z = 0; z <= this.N; z++) {
-            let x_translation = Mat4.identity();
+            let x_pos = this.pos[0];
+
             for (let x = 0; x <= this.N; x++) {
-                this.draw_peg(context, program_state, x_translation.times(z_translation));
-                x_translation = x_translation.times(Mat4.translation(this.WALL_WIDTH + this.CELL_SIZE, 0, 0));
+                this.objects.push(new Peg(this.scene, vec3(this.WALL_WIDTH, this.HEIGHT, this.WALL_WIDTH), vec3(x_pos, 0, z_pos)));
+                x_pos += this.WALL_WIDTH + this.CELL_SIZE;
             }
-            z_translation = z_translation.times(Mat4.translation(0, 0, this.WALL_WIDTH + this.CELL_SIZE));
+
+            z_pos += this.WALL_WIDTH + this.CELL_SIZE;
         }
         
         // Draw walls
-        z_translation = model_transform;
+        z_pos = this.pos[2];
         for (let z = 0; z < this.N; z++) {
-            let x_translation = Mat4.identity();
+            let x_pos = this.pos[0];
+
             // Draw x-axis aligned walls
             for (let x = 0; x < this.N; x++) {
-                x_translation = x_translation.times(Mat4.translation(this.WALL_WIDTH, 0, 0));
-                if (!this.maze_connections[x][z][3])
-                    this.draw_wall(context, program_state, x_translation.times(z_translation), true);
-                x_translation = x_translation.times(Mat4.translation(this.CELL_SIZE, 0, 0));
+                x_pos += this.WALL_WIDTH;
+                if (!this.maze_connections[x][z][3]) {
+                    this.objects.push(new Wall(this.scene, vec3(this.CELL_SIZE, this.HEIGHT, this.WALL_WIDTH), vec3(x_pos, 0, z_pos)));
+                }
+                x_pos += this.CELL_SIZE;
             }
-            z_translation = z_translation.times(Mat4.translation(0, 0, this.WALL_WIDTH));
+
+            z_pos += this.WALL_WIDTH;
+            
             // Draw z-axis aligned walls
-            x_translation = Mat4.identity();
+            x_pos = this.pos[0];
             for (let x = 0; x <= this.N; x++) {
-                if (x == this.N || !this.maze_connections[x][z][2])
-                    this.draw_wall(context, program_state, x_translation.times(z_translation), false);
-                x_translation = x_translation.times(Mat4.translation(this.WALL_WIDTH + this.CELL_SIZE, 0, 0));
+                if (x == this.N || !this.maze_connections[x][z][2]) {
+                    this.objects.push(new Wall(this.scene, vec3(this.WALL_WIDTH, this.HEIGHT, this.CELL_SIZE), vec3(x_pos, 0, z_pos)));
+                }
+
+                x_pos += this.WALL_WIDTH + this.CELL_SIZE;
             }
-            z_translation = z_translation.times(Mat4.translation(0, 0, this.CELL_SIZE));
+
+            z_pos += this.CELL_SIZE;
         }
 
         // Draw bottom walls
-        let x_translation = Mat4.identity();
+        let x_pos = this.pos[0];
         for (let x = 0; x < this.N; x++) {
-            x_translation = x_translation.times(Mat4.translation(this.WALL_WIDTH, 0, 0));
-            this.draw_wall(context, program_state, x_translation.times(z_translation), true);
-            x_translation = x_translation.times(Mat4.translation(this.CELL_SIZE, 0, 0));
+            x_pos += this.WALL_WIDTH;
+            this.objects.push(new Wall(this.scene, vec3(this.CELL_SIZE, this.HEIGHT, this.WALL_WIDTH), vec3(x_pos, 0, z_pos)));
+            x_pos += this.CELL_SIZE;
+        }
+    }
+
+    draw_maze(context, program_state) {
+        for (let i in this.objects) {
+            this.objects[i].draw(context, program_state);
         }
     }
 

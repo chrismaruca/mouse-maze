@@ -58,8 +58,9 @@ export class Mouse_Maze extends Scene {
         let WALL_WIDTH = 0.5;
         let SIZE = N * (CELL_SIZE + WALL_WIDTH) + WALL_WIDTH; // Size of the entire maze
         let WALL_HEIGHT = 3; // The height of the walls
+        let MAZE_START_POS = vec3(0, 0, 0);
 
-        this.Maze = new Maze(this, N, CELL_SIZE, WALL_WIDTH, WALL_HEIGHT);
+        this.Maze = new Maze(this, N, CELL_SIZE, WALL_WIDTH, WALL_HEIGHT, MAZE_START_POS);
         
         // Mouse variables
         let start_loc = (CELL_SIZE+WALL_WIDTH) * 0.5 + 0.25;
@@ -146,6 +147,8 @@ export class Mouse_Maze extends Scene {
 
         this.mouse_camera = null;
         //this.blending_factor = [1, 0.01, 1, 1];
+
+        this.objects = [];
     }
 
     make_control_panel() {
@@ -219,13 +222,10 @@ export class Mouse_Maze extends Scene {
         // Lights
         program_state.lights = [];
 
-        let maze_x = 0, maze_y = 0, maze_z = 0;
-        let maze_model_transform = Mat4.translation(maze_x, maze_y, maze_z);
-
         let cheese_float_height = .5*Math.sin(Math.PI*t) + 1;
 
-        let cheese_light_pos = vec4(this.Maze.cheese_x, maze_y + cheese_float_height, this.Maze.cheese_z, 1);
-        let global_light_pos = vec4(this.Maze.SIZE/2, maze_y + 100, this.Maze.SIZE/2, 1);
+        let cheese_light_pos = vec4(this.Maze.cheese_x, this.Maze.pos[1] + cheese_float_height, this.Maze.cheese_z, 1);
+        let global_light_pos = vec4(this.Maze.SIZE/2, this.Maze.pos[1] + 100, this.Maze.SIZE/2, 1);
         program_state.lights.push(new Light(cheese_light_pos, hex_color('#FFFF00'), 100));
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
 
@@ -239,7 +239,7 @@ export class Mouse_Maze extends Scene {
         // }
 
        if (this.pressedStart) {
-            this.Maze.draw_maze(context, program_state, maze_model_transform);
+            this.Maze.draw_maze(context, program_state);
             this.Maze.draw_cheese(context, program_state);
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
@@ -251,26 +251,35 @@ export class Mouse_Maze extends Scene {
             } else {
                 //program_state.set_camera(this.mouse_camera.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, this.blending_factor)));
                 program_state.set_camera(this.mouse_camera);
+            }
 
-                // Visually display the counter in the top left of the screen when in first-person view
-                let countDisplay = "Cheese: " + this.count;
-                this.shapes.text.set_string(countDisplay, context.context);
-                let counter_transform = Mat4.inverse(this.mouse_camera)
-                    .times(Mat4.translation(-11.0/16, 6.0/16, -1))
-                    .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
-                this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
+            // Visually display the counter in the top left of the screen
+            let countDisplay = "Cheese: " + this.count;
+            this.shapes.text.set_string(countDisplay, context.context);
+            let counter_transform = Mat4.inverse(program_state.camera_inverse)
+                .times(Mat4.translation(-11.0/16, 6.0/16, -1))
+                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+            this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
 
-                //make timer count down
-                var currentTime = (GAME_LENGTH - (t - this.start_time)).toFixed(1);
-                let timerDisplay = "Time: " + currentTime;
-               // timerDisplay = timerDisplay.toFixed(1);
-                console.log("timer:", timerDisplay)
+            //make timer count down
+            var currentTime = (GAME_LENGTH - (t - this.start_time)).toFixed(1);
+            let timerDisplay = "Time: " + currentTime;
+            // timerDisplay = timerDisplay.toFixed(1);
+            //console.log("timer:", timerDisplay)
 
-                let timer_transform = Mat4.inverse(this.mouse_camera)
-                    .times(Mat4.translation(-11.0/16, 5.0/16, -1))
-                    .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
-                this.shapes.timer.set_string(timerDisplay, context.context);
-                this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
+            let timer_transform = Mat4.inverse(program_state.camera_inverse)
+                .times(Mat4.translation(-11.0/16, 5.0/16, -1))
+                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+            this.shapes.timer.set_string(timerDisplay, context.context);
+            this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
+
+            //if mouse touched the cheese -> randomize cheese object & increase count
+            if(Math.abs(this.Mouse.pos[0] - this.Maze.cheese_x) <= 0.5 && Math.abs(this.Mouse.pos[2] - this.Maze.cheese_z) <= 0.5 ){
+                //console.log(this.Mouse.pos[0], this.Maze.cheese_x);
+                //console.log(this.Mouse.pos[2], this.Maze.cheese_z);
+                this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
+                this.count += 1;
+                console.log(this.count);
             }
 
             //if currentTime less than or equal to 0.  END GAME
@@ -290,28 +299,23 @@ export class Mouse_Maze extends Scene {
        }
        //if the game finished
        if(this.endGame){
-           //end game functionality
-           this.gameDoneMenu.style.display = 'block';
-           this.gameTime.textContent = "Game Length: " + GAME_LENGTH + " seconds";
-           this.gamePersonalScore.textContent = "Score: " + this.count;
+            //end game functionality
+            this.gameDoneMenu.style.display = 'block';
+            this.gameTime.textContent = "Game Length: " + GAME_LENGTH + " seconds";
+            this.gamePersonalScore.textContent = "Score: " + this.count;
 
-           console.log(this.count, "count: ")
+            console.log(this.count, "count: ")
+
+            this.Mouse.reset();
 
        }
 
-        
-
-      // let count = 0;
+        // let count = 0;
         //Counter functionality
         // this.shapes.text.set_string("COUNTER", context.context);
         // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
 
-        //if mouse touched the object -> randomize cheese object & increase count
-        if(Math.floor(this.Mouse.pos[0] - this.Maze.cheese_x) === 0 && Math.floor(this.Mouse.pos[2] - this.Maze.cheese_z) === 0){
-            this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
-            this.count += 1;
-            console.log(this.count);
-        }
+        
 
         
 
