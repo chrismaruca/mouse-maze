@@ -22,6 +22,11 @@ export class Maze {
         this.randomize_maze();
         this.log_maze();
     }
+
+    set_N(n) {
+        this.N = n;
+        this.SIZE = n * (this.CELL_SIZE + this.WALL_WIDTH) + this.WALL_WIDTH;
+    }
     
     // Use randomized recursive DFS to generate the maze definition
     recursive_maze_gen(maze, x, z) {

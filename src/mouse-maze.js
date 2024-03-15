@@ -86,7 +86,7 @@ export class Mouse_Maze extends Scene {
         };
 
         // Maze size variables
-        let N = 8; // The board is N x N cells large
+        let N = 5; // The board is N x N cells large
         let CELL_SIZE = 5; // Each cell is CELL_SIZE x CELL_SIZE large
         let WALL_WIDTH = 0.5;
         let SIZE = N * (CELL_SIZE + WALL_WIDTH) + WALL_WIDTH; // Size of the entire maze
@@ -128,27 +128,64 @@ export class Mouse_Maze extends Scene {
         });
 
         // Camera overlooking maze
-        this.top_down_camera = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
         this.top_down_enabled = false;
         this.third_person_enabled = 0;
         
         this.pressedStart = false;
 
         // Game length
-        this.GAME_LENGTH = 300;
+        this.GAME_LENGTH = 120;
 
         //start game functionality
         this.startMenu = document.getElementById("start-menu");
         this.welcomeText = document.getElementById("welcome-message");
-        this.start_button = document.getElementById("start-button");
+        //this.start_button = document.getElementById("start-button");
+        this.easy_button = document.getElementById("easy-button")
+        this.medium_button = document.getElementById("medium-button")
+        this.hard_button = document.getElementById("hard-button")
 
         //text inside message
         this.welcomeText.textContent = "Mouse Maze";
         this.welcomeText.style.color = "white";
-        this.start_button.textContent = "New Game";
+        //this.start_button.textContent = "New Game";
 
-        this.start_button.onclick = () => {
+        // this.start_button.onclick = () => {
+        //     this.pressedStart = true;
+        //     this.startMenu.style.display = 'none';
+        // };
+        this.easy_button.onclick = () => {
             this.pressedStart = true;
+            this.difficulty = "Easy";
+            this.Maze.set_N(5);
+            this.Maze.randomize_maze();
+            this.Maze.log_maze();
+            this.Cheese.starting_cheese_position(
+                this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH
+            );
+            this.startMenu.style.display = 'none';
+        };
+
+        this.medium_button.onclick = () => {
+            this.pressedStart = true;
+            this.difficulty = "Medium";
+            this.Maze.set_N(7);
+            this.Maze.randomize_maze();
+            this.Maze.log_maze();
+            this.Cheese.starting_cheese_position(
+                this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH
+            );
+            this.startMenu.style.display = 'none';
+        };
+
+        this.hard_button.onclick = () => {
+            this.pressedStart = true;
+            this.difficulty = "Hard";
+            this.Maze.set_N(9);
+            this.Maze.randomize_maze();
+            this.Maze.log_maze();
+            this.Cheese.starting_cheese_position(
+                this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH
+            );
             this.startMenu.style.display = 'none';
         };
 
@@ -183,6 +220,7 @@ export class Mouse_Maze extends Scene {
         this.gameDoneMenu = document.getElementById("gameDone-menu");
         this.gameDoneMessage = document.getElementById("gameDone-message");
         this.gameTime = document.getElementById("timer");
+        this.difficultyMessage = document.getElementById("difficulty");
         this.gamePersonalScore = document.getElementById("personal-Score");
         this.gameHighScore = document.getElementById("high-score");
 
@@ -200,7 +238,7 @@ export class Mouse_Maze extends Scene {
 
 
         //count how many cheese currently obtained
-        this.count = 20;
+        this.count = 0;
         // How much the mouse slows down every time it eats a piece of cheese
         this.slow_factor = 0.2;
         this.best = 0;
@@ -228,7 +266,7 @@ export class Mouse_Maze extends Scene {
             this.Mouse.vel[2] = 0;
         });
         this.key_triggered_button("Move backward", ['s'], () => {
-            this.Mouse.vel[2] = -this.Mouse.speed - this.count*this.slow_factor;
+            this.Mouse.vel[2] = -this.Mouse.speed + this.count*this.slow_factor;
         }, undefined, () => {
             this.Mouse.vel[2] = 0;
         });
@@ -238,7 +276,7 @@ export class Mouse_Maze extends Scene {
             this.Mouse.vel[0] = 0;
         });
         this.key_triggered_button("Move right", ['d'], () => {
-            this.Mouse.vel[0] = -this.Mouse.speed - this.count*this.slow_factor;
+            this.Mouse.vel[0] = -this.Mouse.speed + this.count*this.slow_factor;
         }, undefined, () => {
             this.Mouse.vel[0] = 0;
         });
@@ -261,10 +299,12 @@ export class Mouse_Maze extends Scene {
         this.key_triggered_button("Fullscreen", ['f'], () => {
             document.getElementsByTagName('canvas')[0].requestFullscreen();
         });
-        this.key_triggered_button("Quit game", ['p'], () => {
-            this.total_time = (this.t - this.start_time).toFixed(1);
-            this.pressedStart = false;
-            this.endGame = true;
+        this.key_triggered_button("End game", ['p'], () => {
+            if (this.pressedStart === true){
+                this.total_time = (this.t - this.start_time).toFixed(1);
+                this.pressedStart = false;
+                this.endGame = true;
+            }
         })
         //added for start menu
         // this.key_triggered_button("Start Game", ['S'], () => {
@@ -331,6 +371,10 @@ export class Mouse_Maze extends Scene {
             this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
             this.third_person_mouse_camera = Mat4.look_at(this.Mouse.third_person_eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
             this.front_mouse_camera = Mat4.look_at(this.Mouse.front_eye_vec(), this.Mouse.front_at_vec(), vec3(0, 1, 0));
+            this.top_down_camera = Mat4.look_at(
+                vec3(this.Maze.SIZE/2, this.Maze.SIZE+25, this.Maze.SIZE*3/5), 
+                vec3(this.Maze.SIZE/2, 0, this.Maze.SIZE/2), 
+                vec3(0, 1, 0));
 
             if (this.top_down_enabled) {
                 //program_state.set_camera(this.top_down_camera.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, this.blending_factor[i])));
@@ -398,6 +442,16 @@ export class Mouse_Maze extends Scene {
             //end game functionality
             this.gameDoneMenu.style.display = 'block';
             this.gameTime.textContent = "Game length: " + this.total_time + " seconds";
+            this.difficultyMessage.textContent = "Difficulty: " + this.difficulty;
+            if (this.difficulty === "Easy") {
+                this.difficultyMessage.style.color = "lightgreen"
+            }
+            else if (this.difficulty === "Medium") {
+                this.difficultyMessage.style.color = "white"
+            }
+            else if (this.difficulty === "Hard") {
+                this.difficultyMessage.style.color = "red"
+            }
             this.gamePersonalScore.textContent = "Score: " + this.count +  (this.high_score ? " (new best)" : "");
             this.gamePersonalScore.style.color = this.high_score ? "gold" : "lightyellow";
             this.gameHighScore.textContent = "High score: " + this.best;
