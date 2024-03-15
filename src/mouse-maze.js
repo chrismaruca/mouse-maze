@@ -22,8 +22,12 @@ export class Mouse_Maze extends Scene {
             text: new Text_Line(35),
             timer: new Text_Line(35),
             best_score_text: new Text_Line(35),
-            cylinder: new defs.Capped_Cylinder(1, 20, [[0, 2], [0, 1]]),
-            bg_sphere: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(4)
+            cylinder: new defs.Capped_Cylinder(1, 30, [[0, 2], [0, 1]]),
+            rounded_cylinder: new defs.Rounded_Capped_Cylinder(1, 20, [[0, 2], [0, 1]]),
+            bg_sphere: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(4),
+            sphere: new defs.Subdivision_Sphere(4),
+            blocky_sphere: new defs.Subdivision_Sphere(2),
+            cone: new defs.Cone_Tip(1, 30, [[0, 2], [0, 1]])
         };
         
 
@@ -49,8 +53,16 @@ export class Mouse_Maze extends Scene {
             }),
             wood: new Material(bump_map, {ambient: .2, color: hex_color('#cdaa7d')}),
             mouse: new Material(phong, {
-                ambient: .8, diffusivity: .8, specularity: .2,
-                color: hex_color('#808080')
+                ambient: .8, diffusivity: 0.2, specularity: 0,
+                color: hex_color('#c0c0c0')
+            }),
+            mouse_2: new Material(phong, {
+                ambient: .8, diffusivity: 0.2, specularity: 0,
+                color: hex_color('#c29c93')
+            }),
+            mouse_eye: new Material(phong, {
+                ambient: .8, diffusivity: 0.2, specularity: 0.6,
+                color: hex_color('#000000')
             }),
             wall: new Material(bump_map, {
                 ambient: .8, diffusivity: .8, specularity: .2,
@@ -110,10 +122,12 @@ export class Mouse_Maze extends Scene {
         // Camera overlooking maze
         this.top_down_camera = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
         this.top_down_enabled = false;
+        this.third_person_enabled = 0;
+        
         this.pressedStart = false;
 
         // Game length
-        this.GAME_LENGTH = 10;
+        this.GAME_LENGTH = 300;
 
         //start game functionality
         this.startMenu = document.getElementById("start-menu");
@@ -228,6 +242,9 @@ export class Mouse_Maze extends Scene {
         }, undefined, () => {
             this.Mouse.rotv = 0;
         });
+        this.key_triggered_button("Third person view", ['v'], () => {
+            this.third_person_enabled = (this.third_person_enabled + 1) % 3;
+        });
         this.key_triggered_button("Top down view", ['m'], () => {
             this.top_down_enabled = !this.top_down_enabled;
         });
@@ -295,10 +312,16 @@ export class Mouse_Maze extends Scene {
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
             this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
+            this.third_person_mouse_camera = Mat4.look_at(this.Mouse.third_person_eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
+            this.front_mouse_camera = Mat4.look_at(this.Mouse.front_eye_vec(), this.Mouse.front_at_vec(), vec3(0, 1, 0));
 
             if (this.top_down_enabled) {
                 //program_state.set_camera(this.top_down_camera.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, this.blending_factor[i])));
                 program_state.set_camera(this.top_down_camera);
+            } else if (this.third_person_enabled == 1) {
+                program_state.set_camera(this.third_person_mouse_camera)
+            } else if (this.third_person_enabled == 2) {
+                program_state.set_camera(this.front_mouse_camera);
             } else {
                 //program_state.set_camera(this.mouse_camera.map((x, i) => Vector.from(program_state.camera_inverse[i]).mix(x, this.blending_factor)));
                 program_state.set_camera(this.mouse_camera);

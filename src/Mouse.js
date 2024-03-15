@@ -30,8 +30,20 @@ export class Mouse {
         return this.pos.to3().plus(vec3(0.5 * Math.sin(this.angle), 0, 0.5 * Math.cos(this.angle)));
     }
 
+    third_person_eye_vec() {
+        return this.pos.to3().plus(vec3(-3.0 * Math.sin(this.angle), 1.2, -3.0 * Math.cos(this.angle)));
+    }
+
+    front_eye_vec() {
+        return this.pos.to3().plus(vec3(4.0 * Math.sin(this.angle), 1.2, 4.0 * Math.cos(this.angle)));
+    }
+
     at_vec() {
         return this.pos.to3().plus(vec3(1 * Math.sin(this.angle), 0, 1 * Math.cos(this.angle)));
+    }
+
+    front_at_vec() {
+        return this.pos.to3().plus(vec3(-1 * Math.sin(this.angle), 0, -1 * Math.cos(this.angle)));
     }
 
     has_collision(maze_object) {
@@ -70,19 +82,95 @@ export class Mouse {
     }
 
     draw_mouse(context, program_state) {
-        // Make mouse a 1x1x1 cube
+        // Make mouse size 1x1x1
         let ShrinkSc = Mat4.scale(0.5, 0.5, 0.5);
-        // Translate mouse to its position
-        let PosTr = Mat4.translation(this.pos[0], this.pos[1], this.pos[2]);
         // Rotate mouse by its angle
         let AngleRot = Mat4.rotation(this.angle, 0, 1, 0);
+        // Translate mouse to its position
+        let PosTr = Mat4.translation(this.pos[0], this.pos[1]-0.25, this.pos[2]);
+        // General mouse position matrix
+        let mouse_matrix = PosTr.times(AngleRot);
 
-        let mouse_matrix = PosTr.times(AngleRot).times(ShrinkSc);
-        this.scene.shapes.cube.draw(
+        // Mouse main body
+        let MainBodySc = Mat4.scale(1, 1, 1.25);
+        let MainBodyTr = Mat4.translation(0, 0, -.05675);
+        this.scene.shapes.sphere.draw(
             context, program_state,
-            mouse_matrix,
+            mouse_matrix.times(MainBodySc).times(MainBodyTr).times(ShrinkSc),
             this.scene.materials.mouse
         );
+
+        let CylinderSc = Mat4.scale(.95, .95, 0.5);
+        let CylinderTr = Mat4.translation(0, 0, 0);
+        this.scene.shapes.cylinder.draw(
+            context, program_state,
+            mouse_matrix.times(CylinderSc).times(CylinderTr).times(ShrinkSc),
+            this.scene.materials.mouse
+        );
+        
+        // Mouse nose
+        let ConeSc = Mat4.scale(.96, 0.96, 0.8);
+        let ConeTr = Mat4.translation(0, 0, 0.80);
+        let cone_matrix = mouse_matrix.times(ConeSc).times(ConeTr).times(ShrinkSc);
+        this.scene.shapes.cone.draw(
+            context, program_state,
+            cone_matrix,
+            this.scene.materials.mouse
+        );
+
+        // Nose tip
+        let NubSc = Mat4.scale(0.125, 0.125, 0.125);
+        let NubTr = Mat4.translation(0, 0, 1);
+        let nub_matrix = mouse_matrix.times(NubTr).times(NubSc).times(ShrinkSc);
+        this.scene.shapes.blocky_sphere.draw(
+            context, program_state,
+            nub_matrix,
+            this.scene.materials.mouse_2
+        );
+
+        // Eyes
+        let EyeSc = Mat4.scale(1.0/16.0, 1.0/16.0, 1.0/16.0);
+        let LeftEyeTr = Mat4.translation(-0.1875, 0.125, .75);
+        let RightEyeTr = Mat4.translation(0.1875, 0.125, .75);
+        let left_eye_matrix = mouse_matrix.times(LeftEyeTr).times(EyeSc).times(ShrinkSc);
+        let right_eye_matrix = mouse_matrix.times(RightEyeTr).times(EyeSc).times(ShrinkSc);
+        this.scene.shapes.blocky_sphere.draw(
+            context, program_state,
+            left_eye_matrix,
+            this.scene.materials.mouse_eye
+        );
+        this.scene.shapes.blocky_sphere.draw(
+            context, program_state,
+            right_eye_matrix,
+            this.scene.materials.mouse_eye
+        );
+
+        // Ears
+        let EarSc = Mat4.scale(5.0/16.0, 5.0/16.0, 1.0/16.0);
+        let LeftEarTr = Mat4.translation(-0.35, 0.35, .5);
+        let RightEarTr = Mat4.translation(0.35, 0.35, .5);
+        let left_ear_matrix = mouse_matrix.times(LeftEarTr).times(EarSc).times(ShrinkSc);
+        let right_ear_matrix = mouse_matrix.times(RightEarTr).times(EarSc).times(ShrinkSc);
+        this.scene.shapes.blocky_sphere.draw(
+            context, program_state,
+            left_ear_matrix,
+            this.scene.materials.mouse_2
+        );
+        this.scene.shapes.blocky_sphere.draw(
+            context, program_state,
+            right_ear_matrix,
+            this.scene.materials.mouse_2
+        );
+
+        // Tail
+        let TailSc = Mat4.scale(1.0/16.0, 1.0/16.0, .5);
+        let TailTr = Mat4.translation(0, -0.375, -0.6);
+        let tail_matrix = mouse_matrix.times(TailTr).times(TailSc).times(ShrinkSc);
+        this.scene.shapes.blocky_sphere.draw(
+            context, program_state,
+            tail_matrix,
+            this.scene.materials.mouse_2
+        )
     }
 
     reset() {
