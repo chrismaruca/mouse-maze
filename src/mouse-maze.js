@@ -65,8 +65,8 @@ export class Mouse_Maze extends Scene {
         this.Maze = new Maze(this, N, CELL_SIZE, WALL_WIDTH, WALL_HEIGHT, MAZE_START_POS);
         
         // Create the cheese
-        this.cheese = new Cheese(this, vec3(1, 1, 1));
-        this.cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
+        this.Cheese = new Cheese(this, vec3(1, 1, 1));
+        this.Cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
 
         // Mouse variables
         let start_loc = (CELL_SIZE+WALL_WIDTH) * 0.5 + 0.25;
@@ -96,7 +96,7 @@ export class Mouse_Maze extends Scene {
         this.pressedStart = false;
 
         // Game length
-        this.GAME_LENGTH = 300;
+        this.GAME_LENGTH = 10;
 
         //start game functionality
         this.startMenu = document.getElementById("start-menu");
@@ -121,6 +121,9 @@ export class Mouse_Maze extends Scene {
             this.startMenu.style.display = 'none';
             this.gameDoneMenu.style.display = 'none';
             this.count = 0; //reset the count
+            this.Mouse.reset();
+            this.Maze.construct_maze();
+            this.Cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
         };
 
         //quit game button
@@ -131,6 +134,9 @@ export class Mouse_Maze extends Scene {
             this.startMenu.style.display = 'block';
             this.gameDoneMenu.style.display = 'none';
             this.count = 0 //reset the count
+            this.Mouse.reset();
+            this.Maze.construct_maze();
+            this.Cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
         };
         //end game menu
         this.gameDoneMenu = document.getElementById("gameDone-menu");
@@ -166,7 +172,7 @@ export class Mouse_Maze extends Scene {
             this.Maze.log_maze();
         });
         this.key_triggered_button("Randomize cheese position", ['c'], () => {
-            this.cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
+            this.Cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
         });
         this.new_line();
         // Mouse controls
@@ -228,8 +234,8 @@ export class Mouse_Maze extends Scene {
 
         let cheese_float_height = .5*Math.sin(Math.PI*t) + 1;
 
-        //console.log(this.cheese.mid_pos[0], this.cheese.mid_pos[1], this.cheese.mid_pos[2]);
-        let cheese_light_pos = vec4(this.cheese.mid_pos[0], this.cheese.mid_pos[1] + cheese_float_height, this.cheese.mid_pos[2], 1);
+        //console.log(this.Cheese.mid_pos[0], this.Cheese.mid_pos[1], this.Cheese.mid_pos[2]);
+        let cheese_light_pos = vec4(this.Cheese.mid_pos[0], this.Cheese.mid_pos[1] + cheese_float_height, this.Cheese.mid_pos[2], 1);
         let global_light_pos = vec4(this.Maze.SIZE/2, this.Maze.pos[1] + 100, this.Maze.SIZE/2, 1);
         program_state.lights.push(new Light(cheese_light_pos, hex_color('#FFFF00'), 100));
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
@@ -237,7 +243,7 @@ export class Mouse_Maze extends Scene {
        if (this.pressedStart) {
             this.Maze.draw_maze(context, program_state);
             //this.Maze.draw_cheese(context, program_state);
-            this.cheese.draw(context, program_state);
+            this.Cheese.draw(context, program_state);
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
             this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
@@ -271,21 +277,15 @@ export class Mouse_Maze extends Scene {
             this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
 
             //if mouse touched the cheese -> randomize cheese object & increase count
-            if(Math.abs(this.Mouse.mid_pos[0] - this.cheese.mid_pos[0]) <= 1 && Math.abs(this.Mouse.mid_pos[2] - this.cheese.mid_pos[2]) <= 1 ){
-                //console.log(this.Mouse.pos[0], this.Maze.cheese_x);
-                //console.log(this.Mouse.pos[2], this.Maze.cheese_z);
-                this.cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
+            if(Math.abs(this.Mouse.mid_pos[0] - this.Cheese.mid_pos[0]) <= 1 && Math.abs(this.Mouse.mid_pos[2] - this.Cheese.mid_pos[2]) <= 1 ) {
+                this.Cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
                 this.count += 1;
                 console.log(this.count);
             }
 
             //if currentTime less than or equal to 0.  END GAME
            if (currentTime <= 0) {
-               // Reset cheese count
-               //this.count = 0;
-               // End the game
                this.pressedStart = false;
-               //this.gameDoneMenu.style.display = 'block'; //show end game menu
                this.endGame = true;
            }
        }
@@ -300,10 +300,7 @@ export class Mouse_Maze extends Scene {
             this.gameTime.textContent = "Game Length: " + this.GAME_LENGTH + " seconds";
             this.gamePersonalScore.textContent = "Score: " + this.count;
 
-            console.log(this.count, "count: ")
-
-            this.Mouse.reset();
-
+            console.log("count: ", this.count);
        }
     }
 }

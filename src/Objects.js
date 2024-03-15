@@ -90,10 +90,8 @@ export class Cheese extends Maze_Object {
     }
 
     randomize_cheese_position(min_x, max_x, min_z, max_z, cell_size, wall_width) {
-        console.log(this.pos);
         this.pos[0] = (min_x + get_rand_num(max_x - min_x) + 0.5) * (cell_size + wall_width);
         this.pos[2] = (min_z + get_rand_num(max_z - min_z) + 0.5) * (cell_size + wall_width);
-        console.log(this.pos);
         
         this.mid_pos = vec3(
             this.pos[0] + this.model_size[0] / 2,
