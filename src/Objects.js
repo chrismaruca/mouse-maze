@@ -7,6 +7,7 @@ const {
 
 export class Maze_Object {
     constructor(scene, model_size, start_pos) {
+        this.type = "object";
         this.scene = scene;
         this.model_size = model_size;
         this.pos = start_pos;
@@ -37,6 +38,7 @@ export class Maze_Object {
 export class Floor extends Maze_Object {
     constructor(scene, model_size, start_pos) {
         super(scene, model_size, start_pos);
+        this.type = "floor";
 
         this.calculate_model_transform();
     }
@@ -53,6 +55,7 @@ export class Floor extends Maze_Object {
 export class Wall extends Maze_Object {
     constructor(scene, model_size, start_pos) {
         super(scene, model_size, start_pos);
+        this.type = "wall";
 
         this.calculate_model_transform();
     }
@@ -69,6 +72,7 @@ export class Wall extends Maze_Object {
 export class Peg extends Maze_Object {
     constructor(scene, model_size, start_pos) {
         super(scene, model_size, start_pos);
+        this.type = "peg";
 
         this.calculate_model_transform();
     }
@@ -85,6 +89,7 @@ export class Peg extends Maze_Object {
 export class Cheese extends Maze_Object {
     constructor(scene, model_size) {
         super(scene, model_size, vec3(0, 0, 0));
+        this.type = "cheese";
 
         this.calculate_model_transform();
     }
@@ -114,10 +119,11 @@ export class Cheese extends Maze_Object {
         let float_height = .5*Math.sin(Math.PI*t) + 1;
         let FloatTr = Mat4.translation(0, float_height, 0);
         let Rot = Mat4.rotation(t*Math.PI/4.0, 0, 1, 0);
+        let OrientationRt = Mat4.rotation(Math.PI/2, 1, 0, 0);
 
         this.scene.shapes.cheese.draw(
             context, program_state, 
-            FloatTr.times(this.model_transform).times(Rot), 
+            FloatTr.times(this.model_transform).times(Rot).times(OrientationRt), 
             this.scene.materials.cheese
         );
     }

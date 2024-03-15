@@ -1,6 +1,6 @@
 import {defs, tiny} from '../common.js';
 import {get_rand_num} from './Utils.js';
-import { Floor, Wall, Peg, Cheese } from './Objects.js';
+import { Floor, Wall, Peg } from './Objects.js';
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture

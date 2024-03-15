@@ -22,28 +22,30 @@ export class Mouse {
         // Mouse movement speed
         this.speed = speed;
 
+        this.tail_angle = 0;
+
         this.model_size = vec3(1, 1, 1);
         this.rotated_model = vec3(1, 1, 1);
     }
 
     eye_vec() {
-        return this.pos.to3().plus(vec3(0.5 * Math.sin(this.angle), 0, 0.5 * Math.cos(this.angle)));
+        return this.pos.to3().plus(vec3((0.5+0.1*this.scene.count) * Math.sin(this.angle), 0, (0.5+0.1*this.scene.count) * Math.cos(this.angle)));
     }
 
     third_person_eye_vec() {
-        return this.pos.to3().plus(vec3(-3.0 * Math.sin(this.angle), 1.2, -3.0 * Math.cos(this.angle)));
+        return this.pos.to3().plus(vec3((-4.0-0.1*this.scene.count) * Math.sin(this.angle), 1.2, (-4.0-0.1*this.scene.count) * Math.cos(this.angle)));
     }
 
     front_eye_vec() {
-        return this.pos.to3().plus(vec3(4.0 * Math.sin(this.angle), 1.2, 4.0 * Math.cos(this.angle)));
+        return this.pos.to3().plus(vec3((4.0+0.1*this.scene.count) * Math.sin(this.angle), 1.2, (4.0+0.1*this.scene.count) * Math.cos(this.angle)));
     }
 
     at_vec() {
-        return this.pos.to3().plus(vec3(1 * Math.sin(this.angle), 0, 1 * Math.cos(this.angle)));
+        return this.pos.to3().plus(vec3((1+0.1*this.scene.count) * Math.sin(this.angle), 0, (1+0.1*this.scene.count) * Math.cos(this.angle)));
     }
 
     front_at_vec() {
-        return this.pos.to3().plus(vec3(-1 * Math.sin(this.angle), 0, -1 * Math.cos(this.angle)));
+        return this.pos.to3().plus(vec3((-1-0.1*this.scene.count) * Math.sin(this.angle), 0, (-1-0.1*this.scene.count) * Math.cos(this.angle)));
     }
 
     has_collision(maze_object) {
@@ -77,6 +79,9 @@ export class Mouse {
             }
         }
 
+        let adj_vel = this.vel.times(dt);
+        this.tail_angle += Math.PI/8*Math.sqrt(adj_vel.dot(adj_vel));
+
         this.last_pos = this.pos;
         this.last_angle = this.angle;
     }
@@ -88,8 +93,12 @@ export class Mouse {
         let AngleRot = Mat4.rotation(this.angle, 0, 1, 0);
         // Translate mouse to its position
         let PosTr = Mat4.translation(this.pos[0], this.pos[1]-0.25, this.pos[2]);
+        // Make the mouse get fatter every time he eats a piece of cheese
+        let FatSc = Mat4.scale(1+this.scene.count*0.1, 1+this.scene.count*0.1, 1+this.scene.count*0.1);
         // General mouse position matrix
-        let mouse_matrix = PosTr.times(AngleRot);
+        let mouse_matrix = PosTr.times(AngleRot).times(FatSc);
+
+        
 
         // Mouse main body
         let MainBodySc = Mat4.scale(1, 1, 1.25);
@@ -163,14 +172,23 @@ export class Mouse {
         );
 
         // Tail
+        let t = program_state.animation_time / 1000;
         let TailSc = Mat4.scale(1.0/16.0, 1.0/16.0, .5);
-        let TailTr = Mat4.translation(0, -0.375, -0.6);
-        let tail_matrix = mouse_matrix.times(TailTr).times(TailSc).times(ShrinkSc);
-        this.scene.shapes.blocky_sphere.draw(
-            context, program_state,
-            tail_matrix,
-            this.scene.materials.mouse_2
-        )
+        let TailTr = Mat4.translation(0, -0.375, -0.125);
+        let tail_matrix = Mat4.identity();
+        let OriginTr = Mat4.translation(1.0/16.0*0.5, 1.0/16.0*0.5, .5*0.5);
+        let OriginTrInv = Mat4.translation(-1.0/16.0*0.5, -1.0/16.0*0.5, -.5*0.5);
+        let SubseqTailTr = Mat4.translation(0, 0, -0.5);
+        for (let i = 0; i < 3; i++) {
+            let SubseqTailRot = Mat4.rotation(i*Math.PI/4*Math.cos(this.tail_angle), 0, 1, 0);
+            tail_matrix = tail_matrix.times(SubseqTailTr).times(OriginTr).times(SubseqTailRot).times(OriginTrInv)
+            this.scene.shapes.blocky_sphere.draw(
+                context, program_state,
+                mouse_matrix.times(TailTr).times(tail_matrix).times(TailSc).times(ShrinkSc),
+                this.scene.materials.mouse_2
+            )
+        }
+
     }
 
     reset() {
