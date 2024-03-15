@@ -10,7 +10,7 @@ export class Mouse {
         // Position of the mouse
         this.start_pos = start_pos;
         this.pos = start_pos;
-        this.mid_pos = this.eye_vec();
+        this.mid_pos = this.pos.to3();
         this.last_pos = start_pos;
         // Mouse viewing angle
         this.angle = 0;
@@ -38,7 +38,7 @@ export class Mouse {
         // There is a collision if the distance between the midpoints of the object and mouse
         // is less than half the size of the object plus half the size of the mouse
         for (let i = 0; i < 3; i++) {
-            if (Math.abs(this.mid_pos[i] - maze_object.mid_pos[i]) >= (this.model_size[i]/2 + maze_object.model_size[i]/2)) {
+            if (Math.abs(this.mid_pos[i] - maze_object.mid_pos[i]) >= (this.model_size[i]*.707 + maze_object.model_size[i]/2)) {
                 return false;
             }
         }
@@ -53,7 +53,7 @@ export class Mouse {
             this.vel[1],
             this.vel[2] * Math.cos(this.angle) - this.vel[0] * Math.sin(this.angle));
         this.pos = this.pos.plus(rotated_vel.times(dt));
-        this.mid_pos = this.eye_vec();
+        this.mid_pos = this.pos.to3();
 
         // Check for collisions
         for (let i in this.scene.Maze.objects) {

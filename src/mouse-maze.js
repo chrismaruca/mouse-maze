@@ -20,8 +20,12 @@ export class Mouse_Maze extends Scene {
             wall: new defs.Cube(),
             floor: new defs.Cube(),
             text: new Text_Line(35),
-            timer: new Text_Line(35)
+            timer: new Text_Line(35),
+            best_score_text: new Text_Line(35),
+            cylinder: new defs.Capped_Cylinder(1, 20, [[0, 2], [0, 1]]),
+            bg_sphere: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(4)
         };
+        
 
         // Shaders
         let phong = new defs.Phong_Shader();
@@ -31,6 +35,18 @@ export class Mouse_Maze extends Scene {
         // Materials
         this.materials = {
             blank: new Material(phong, {ambient: .8, diffusivity: .8, color: color(1,1,1,1)}),
+            background: new Material(phong, {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                color: hex_color('#87CEEB')
+            }),
+            grass: new Material(phong, {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                color: hex_color('#388004')
+            }),
+            table: new Material(textured_phong, {
+                ambient: .8, diffusivity: .8, specularity: .2,
+                texture: new Texture('../assets/oak.jpg')
+            }),
             wood: new Material(bump_map, {ambient: .2, color: hex_color('#cdaa7d')}),
             mouse: new Material(phong, {
                 ambient: .8, diffusivity: .8, specularity: .2,
@@ -41,8 +57,9 @@ export class Mouse_Maze extends Scene {
                 texture: new Texture('../assets/wall.jpg')
             }),
             floor: new Material(bump_map, {
-                ambient: .8, diffusivity: .8, specularity: .2,
-                texture: new Texture('../assets/floor.jpg')
+                ambient: .8, diffusivity: .6, specularity: .1,
+                color: color(0, 0, 0, 1),
+                texture: new Texture('../assets/floor_alt.jpg')
             }),
             cheese: new Material(textured_phong, {
                 ambient: .8, diffusivity: 1, specularity: 0,
@@ -105,7 +122,7 @@ export class Mouse_Maze extends Scene {
 
         //text inside message
         this.welcomeText.textContent = "Mouse Maze";
-        this.welcomeText.style.color = "red";
+        this.welcomeText.style.color = "white";
         this.start_button.textContent = "New Game";
 
         this.start_button.onclick = () => {
@@ -121,8 +138,9 @@ export class Mouse_Maze extends Scene {
             this.startMenu.style.display = 'none';
             this.gameDoneMenu.style.display = 'none';
             this.count = 0; //reset the count
+            this.high_score = false;
             this.Mouse.reset();
-            this.Maze.construct_maze();
+            this.Maze.randomize_maze();
             this.Cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
         };
 
@@ -134,8 +152,9 @@ export class Mouse_Maze extends Scene {
             this.startMenu.style.display = 'block';
             this.gameDoneMenu.style.display = 'none';
             this.count = 0 //reset the count
+            this.high_score = false;
             this.Mouse.reset();
-            this.Maze.construct_maze();
+            this.Maze.randomize_maze();
             this.Cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
         };
         //end game menu
@@ -143,22 +162,25 @@ export class Mouse_Maze extends Scene {
         this.gameDoneMessage = document.getElementById("gameDone-message");
         this.gameTime = document.getElementById("timer");
         this.gamePersonalScore = document.getElementById("personal-Score");
+        this.gameHighScore = document.getElementById("high-score");
 
 
-        this.gameDoneMessage.textContent = "Your Score/Stats:";
-        this.gameDoneMessage.style.color = "red";
-        this.gameTime.style.color = "red";
-        this.gamePersonalScore.style.color = "red";
-
+        this.gameDoneMessage.textContent = "Game over";
+        this.gameDoneMessage.style.color = "white";
+        this.gameTime.style.color = "white";
+        this.gamePersonalScore.style.color = "yellow";
+        this.gameHighScore.textContent = "Your score: ";
 
         //initially make it not show
-            //COME BACK TO: WEIRD RENDERING
+        //COME BACK TO: WEIRD RENDERING
         this.gameDoneMenu.style.display = 'none';
         this.endGame = false;
 
 
         //count how many cheese currently obtained
         this.count = 0;
+        this.best = 0;
+        this.high_score = false;
 
         this.mouse_camera = null;
         //this.blending_factor = [1, 0.01, 1, 1];
@@ -207,9 +229,7 @@ export class Mouse_Maze extends Scene {
             this.Mouse.rotv = 0;
         });
         this.key_triggered_button("Top down view", ['m'], () => {
-            this.top_down_enabled = true;
-        }, undefined, () => {
-            this.top_down_enabled = false;
+            this.top_down_enabled = !this.top_down_enabled;
         });
         this.key_triggered_button("Fullscreen", ['f'], () => {
             document.getElementsByTagName('canvas')[0].requestFullscreen();
@@ -220,6 +240,30 @@ export class Mouse_Maze extends Scene {
         // }, undefined, () => {
         //     this.pressedStart = true;
         // });
+    }
+    
+    // Draws a solid-color background around the maze and some other objects
+    draw_background(context, program_state) {
+        this.shapes.bg_sphere.draw(
+            context, program_state,
+            Mat4.translation(this.Maze.SIZE/2, 0, this.Maze.SIZE/2)
+            .times(Mat4.scale(70, 80, 70)),
+            this.materials.background
+        )
+
+        // Grass
+        this.shapes.cube.draw(
+            context, program_state, 
+            Mat4.translation(0, -3, 0).times(Mat4.scale(100, 1, 100)), 
+            this.materials.grass
+        );
+
+        // Table
+        this.shapes.cylinder.draw(
+            context, program_state,
+            Mat4.translation(this.Maze.SIZE/2, -2, this.Maze.SIZE/2).times(Mat4.scale(this.Maze.SIZE*4/5, 1, this.Maze.SIZE*4/5)).times(Mat4.rotation(Math.PI/2, 1, 0, 0)),
+            this.materials.table
+        );
     }
 
     display(context, program_state) {
@@ -241,6 +285,10 @@ export class Mouse_Maze extends Scene {
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
 
        if (this.pressedStart) {
+            // this.shapes.cube.draw(
+            //     context, program_state, Mat4.translation(Maze.SIZE/2, 0, Maze.SIZE/2).times(Mat4.scale(50, 1000, 50)), this.materials.background
+            // );
+            this.draw_background(context, program_state);
             this.Maze.draw_maze(context, program_state);
             //this.Maze.draw_cheese(context, program_state);
             this.Cheese.draw(context, program_state);
@@ -256,30 +304,41 @@ export class Mouse_Maze extends Scene {
                 program_state.set_camera(this.mouse_camera);
             }
 
-            // Visually display the counter in the top left of the screen
-            let countDisplay = "Cheese: " + this.count;
-            this.shapes.text.set_string(countDisplay, context.context);
-            let counter_transform = Mat4.inverse(program_state.camera_inverse)
-                .times(Mat4.translation(-11.0/16, 6.0/16, -1))
-                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
-            this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
-
             //make timer count down
             var currentTime = (this.GAME_LENGTH - (t - this.start_time)).toFixed(1);
-            let timerDisplay = "Time: " + currentTime;
-            // timerDisplay = timerDisplay.toFixed(1);
-            //console.log("timer:", timerDisplay)
+            let timerDisplay = "Time remaining: " + currentTime;
 
             let timer_transform = Mat4.inverse(program_state.camera_inverse)
-                .times(Mat4.translation(-11.0/16, 5.0/16, -1))
+                .times(Mat4.translation(-11.0/16, 6.0/16, -1))
                 .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
             this.shapes.timer.set_string(timerDisplay, context.context);
             this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
+
+            // Visually display the counter in the top left of the screen
+            let countDisplay = "Cheese eaten: " + this.count;
+            this.shapes.text.set_string(countDisplay, context.context);
+            let counter_transform = Mat4.inverse(program_state.camera_inverse)
+                .times(Mat4.translation(6.0/16, 6.0/16, -1))
+                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+            this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
+
+            let bestDisplay = "High score: " + this.best;
+            this.shapes.best_score_text.set_string(bestDisplay, context.context);
+            let best_transform = Mat4.inverse(program_state.camera_inverse)
+                .times(Mat4.translation(6.0/16, 5.0/16, -1))
+                .times(Mat4.scale(1.0/64, 1.0/64, 1.0/64));
+            this.shapes.best_score_text.draw(context, program_state, best_transform, this.materials.text_image);
+
+            
 
             //if mouse touched the cheese -> randomize cheese object & increase count
             if(Math.abs(this.Mouse.mid_pos[0] - this.Cheese.mid_pos[0]) <= 1 && Math.abs(this.Mouse.mid_pos[2] - this.Cheese.mid_pos[2]) <= 1 ) {
                 this.Cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
                 this.count += 1;
+                if (this.count > this.best) {
+                    this.best = this.count;
+                    this.high_score = true;
+                }
                 console.log(this.count);
             }
 
@@ -297,10 +356,13 @@ export class Mouse_Maze extends Scene {
        if(this.endGame){
             //end game functionality
             this.gameDoneMenu.style.display = 'block';
-            this.gameTime.textContent = "Game Length: " + this.GAME_LENGTH + " seconds";
-            this.gamePersonalScore.textContent = "Score: " + this.count;
+            this.gameTime.textContent = "Game length: " + this.GAME_LENGTH + " seconds";
+            this.gamePersonalScore.textContent = "Score: " + this.count +  (this.high_score ? " (new best)" : "");
+            this.gamePersonalScore.style.color = this.high_score ? "gold" : "lightyellow";
+            this.gameHighScore.textContent = "High score: " + this.best;
+            this.gameHighScore.style.color = this.high_score ? "gold" : "lightyellow";
 
-            console.log("count: ", this.count);
+            //console.log("count: ", this.count);
        }
     }
 }
