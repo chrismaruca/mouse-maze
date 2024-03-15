@@ -10,8 +10,11 @@ export class Mouse {
         // Position of the mouse
         this.start_pos = start_pos;
         this.pos = start_pos;
+        this.mid_pos = this.eye_vec();
+        this.last_pos = start_pos;
         // Mouse viewing angle
         this.angle = 0;
+        this.last_angle = 0;
         // Mouse velocity
         this.vel = vec4(0, 0, 0, 0);
         // Mouse rotational velocity
@@ -20,6 +23,7 @@ export class Mouse {
         this.speed = speed;
 
         this.model_size = vec3(1, 1, 1);
+        this.rotated_model = vec3(1, 1, 1);
     }
 
     eye_vec() {
@@ -30,6 +34,18 @@ export class Mouse {
         return this.pos.to3().plus(vec3(1 * Math.sin(this.angle), 0, 1 * Math.cos(this.angle)));
     }
 
+    has_collision(maze_object) {
+        // There is a collision if the distance between the midpoints of the object and mouse
+        // is less than half the size of the object plus half the size of the mouse
+        for (let i = 0; i < 3; i++) {
+            if (Math.abs(this.mid_pos[i] - maze_object.mid_pos[i]) >= (this.model_size[i]/2 + maze_object.model_size[i]/2)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     move(dt) {
         this.angle = this.angle + this.rotv * dt;
         let rotated_vel = vec4(
@@ -37,11 +53,21 @@ export class Mouse {
             this.vel[1],
             this.vel[2] * Math.cos(this.angle) - this.vel[0] * Math.sin(this.angle));
         this.pos = this.pos.plus(rotated_vel.times(dt));
+        this.mid_pos = this.eye_vec();
+
+        // Check for collisions
+        for (let i in this.scene.Maze.objects) {
+            if (this.has_collision(this.scene.Maze.objects[i])) {
+                // If there's a collision then don't let the mouse move
+                this.pos = this.last_pos;
+                this.angle = this.last_angle;
+                break;
+            }
+        }
+
+        this.last_pos = this.pos;
+        this.last_angle = this.angle;
     }
-   //get current position of mouse
-   //  currentPos() {
-   //      return this.pos;
-   //  }
 
     draw_mouse(context, program_state) {
         // Make mouse a 1x1x1 cube

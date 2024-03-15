@@ -1,4 +1,5 @@
 import {defs, tiny} from '../common.js';
+import { get_rand_num } from './Utils.js';
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
@@ -9,6 +10,11 @@ export class Maze_Object {
         this.scene = scene;
         this.model_size = model_size;
         this.pos = start_pos;
+        this.mid_pos = vec3(
+            this.pos[0] + this.model_size[0] / 2,
+            this.pos[1] + this.model_size[1] / 2,
+            this.pos[2] + this.model_size[2] / 2
+        );
     }
 
     calculate_model_transform() {
@@ -72,6 +78,49 @@ export class Peg extends Maze_Object {
             context, program_state,
             this.model_transform,
             this.scene.materials.wall
+        );
+    }
+}
+
+export class Cheese extends Maze_Object {
+    constructor(scene, model_size) {
+        super(scene, model_size, vec3(0, 0, 0));
+
+        this.calculate_model_transform();
+    }
+
+    randomize_cheese_position(min_x, max_x, min_z, max_z, cell_size, wall_width) {
+        console.log(this.pos);
+        this.pos[0] = (min_x + get_rand_num(max_x - min_x) + 0.5) * (cell_size + wall_width);
+        this.pos[2] = (min_z + get_rand_num(max_z - min_z) + 0.5) * (cell_size + wall_width);
+        console.log(this.pos);
+        
+        this.mid_pos = vec3(
+            this.pos[0] + this.model_size[0] / 2,
+            this.pos[1] + this.model_size[1] / 2,
+            this.pos[2] + this.model_size[2] / 2
+        );
+
+        this.calculate_model_transform();
+    }
+
+    // Generates a random starting position for the cheese in the bottom right of the maze
+    starting_cheese_position(N, cell_size, wall_width) {
+        let N2f = Math.floor(N/2);
+        let N2c = Math.ceil(N/2);
+        this.randomize_cheese_position(N2f, N2f+N2c, N2f, N2f+N2c, cell_size, wall_width);
+    }
+
+    draw(context, program_state) {
+        let t = program_state.animation_time / 1000;
+        let float_height = .5*Math.sin(Math.PI*t) + 1;
+        let FloatTr = Mat4.translation(0, float_height, 0);
+        let Rot = Mat4.rotation(t*Math.PI/4.0, 0, 1, 0);
+
+        this.scene.shapes.cheese.draw(
+            context, program_state, 
+            FloatTr.times(this.model_transform).times(Rot), 
+            this.scene.materials.cheese
         );
     }
 }

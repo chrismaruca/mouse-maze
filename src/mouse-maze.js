@@ -2,6 +2,7 @@ import {defs, tiny} from '../common.js';
 import {Text_Line} from './Text_Line.js';
 import {Maze} from './Maze.js';
 import {Mouse} from './Mouse.js';
+import { Cheese } from './Objects.js';
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
@@ -25,25 +26,26 @@ export class Mouse_Maze extends Scene {
         // Shaders
         let phong = new defs.Phong_Shader();
         let textured_phong = new defs.Textured_Phong();
+        let bump_map = new defs.Fake_Bump_Map();
 
         // Materials
         this.materials = {
             blank: new Material(phong, {ambient: .8, diffusivity: .8, color: color(1,1,1,1)}),
-            wood: new Material(phong, {ambient: .2, color: hex_color('#cdaa7d')}),
+            wood: new Material(bump_map, {ambient: .2, color: hex_color('#cdaa7d')}),
             mouse: new Material(phong, {
                 ambient: .8, diffusivity: .8, specularity: .2,
                 color: hex_color('#808080')
             }),
-            wall: new Material(textured_phong, {
+            wall: new Material(bump_map, {
                 ambient: .8, diffusivity: .8, specularity: .2,
                 texture: new Texture('../assets/wall.jpg')
             }),
-            floor: new Material(textured_phong, {
+            floor: new Material(bump_map, {
                 ambient: .8, diffusivity: .8, specularity: .2,
                 texture: new Texture('../assets/floor.jpg')
             }),
             cheese: new Material(textured_phong, {
-                ambient: .8, diffusivity: 1, specularity: 1,
+                ambient: .8, diffusivity: 1, specularity: 0,
                 texture: new Texture('../assets/cheese.jpg')
             }),
             text_image: new Material(textured_phong, {
@@ -62,6 +64,10 @@ export class Mouse_Maze extends Scene {
 
         this.Maze = new Maze(this, N, CELL_SIZE, WALL_WIDTH, WALL_HEIGHT, MAZE_START_POS);
         
+        // Create the cheese
+        this.cheese = new Cheese(this, vec3(1, 1, 1));
+        this.cheese.starting_cheese_position(N, CELL_SIZE, WALL_WIDTH);
+
         // Mouse variables
         let start_loc = (CELL_SIZE+WALL_WIDTH) * 0.5 + 0.25;
         let mouse_start_pos = vec4(start_loc, 1, start_loc, 1);
@@ -88,6 +94,9 @@ export class Mouse_Maze extends Scene {
         this.top_down_camera = Mat4.look_at(vec3(SIZE/2, 70, SIZE*3/5), vec3(SIZE/2, 0, SIZE/2), vec3(0, 1, 0));
         this.top_down_enabled = false;
         this.pressedStart = false;
+
+        // Game length
+        this.GAME_LENGTH = 300;
 
         //start game functionality
         this.startMenu = document.getElementById("start-menu");
@@ -157,7 +166,7 @@ export class Mouse_Maze extends Scene {
             this.Maze.log_maze();
         });
         this.key_triggered_button("Randomize cheese position", ['c'], () => {
-            this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
+            this.cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
         });
         this.new_line();
         // Mouse controls
@@ -208,11 +217,6 @@ export class Mouse_Maze extends Scene {
     }
 
     display(context, program_state) {
-        // Initial setup
-        if (!context.scratchpad.controls) {
-            //this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-
-        }
         // Projection matrix
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, 1, 100);
@@ -224,23 +228,16 @@ export class Mouse_Maze extends Scene {
 
         let cheese_float_height = .5*Math.sin(Math.PI*t) + 1;
 
-        let cheese_light_pos = vec4(this.Maze.cheese_x, this.Maze.pos[1] + cheese_float_height, this.Maze.cheese_z, 1);
+        //console.log(this.cheese.mid_pos[0], this.cheese.mid_pos[1], this.cheese.mid_pos[2]);
+        let cheese_light_pos = vec4(this.cheese.mid_pos[0], this.cheese.mid_pos[1] + cheese_float_height, this.cheese.mid_pos[2], 1);
         let global_light_pos = vec4(this.Maze.SIZE/2, this.Maze.pos[1] + 100, this.Maze.SIZE/2, 1);
         program_state.lights.push(new Light(cheese_light_pos, hex_color('#FFFF00'), 100));
         program_state.lights.push(new Light(global_light_pos, color(1, 1, 1, 1), 100000));
 
-        const GAME_LENGTH = 20;
-
-        // //if mouse touched the object -> randomize cheese object & increase count
-        // if(Math.floor(this.Mouse.pos[0] - this.Maze.cheese_x) === 0 && Math.floor(this.Mouse.pos[2] - this.Maze.cheese_z) === 0){
-        //     this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
-        //     this.count += 1;
-        //     console.log(this.count);
-        // }
-
        if (this.pressedStart) {
             this.Maze.draw_maze(context, program_state);
-            this.Maze.draw_cheese(context, program_state);
+            //this.Maze.draw_cheese(context, program_state);
+            this.cheese.draw(context, program_state);
             this.Mouse.move(dt);
             this.Mouse.draw_mouse(context, program_state);
             this.mouse_camera = Mat4.look_at(this.Mouse.eye_vec(), this.Mouse.at_vec(), vec3(0, 1, 0));
@@ -262,7 +259,7 @@ export class Mouse_Maze extends Scene {
             this.shapes.text.draw(context, program_state, counter_transform, this.materials.text_image);
 
             //make timer count down
-            var currentTime = (GAME_LENGTH - (t - this.start_time)).toFixed(1);
+            var currentTime = (this.GAME_LENGTH - (t - this.start_time)).toFixed(1);
             let timerDisplay = "Time: " + currentTime;
             // timerDisplay = timerDisplay.toFixed(1);
             //console.log("timer:", timerDisplay)
@@ -274,10 +271,10 @@ export class Mouse_Maze extends Scene {
             this.shapes.timer.draw(context, program_state, timer_transform, this.materials.text_image);
 
             //if mouse touched the cheese -> randomize cheese object & increase count
-            if(Math.abs(this.Mouse.pos[0] - this.Maze.cheese_x) <= 0.5 && Math.abs(this.Mouse.pos[2] - this.Maze.cheese_z) <= 0.5 ){
+            if(Math.abs(this.Mouse.mid_pos[0] - this.cheese.mid_pos[0]) <= 1 && Math.abs(this.Mouse.mid_pos[2] - this.cheese.mid_pos[2]) <= 1 ){
                 //console.log(this.Mouse.pos[0], this.Maze.cheese_x);
                 //console.log(this.Mouse.pos[2], this.Maze.cheese_z);
-                this.Maze.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N);
+                this.cheese.randomize_cheese_position(0, this.Maze.N, 0, this.Maze.N, this.Maze.CELL_SIZE, this.Maze.WALL_WIDTH);
                 this.count += 1;
                 console.log(this.count);
             }
@@ -291,17 +288,16 @@ export class Mouse_Maze extends Scene {
                //this.gameDoneMenu.style.display = 'block'; //show end game menu
                this.endGame = true;
            }
-
-            
        }
        else {
         this.start_time = t;
        }
+
        //if the game finished
        if(this.endGame){
             //end game functionality
             this.gameDoneMenu.style.display = 'block';
-            this.gameTime.textContent = "Game Length: " + GAME_LENGTH + " seconds";
+            this.gameTime.textContent = "Game Length: " + this.GAME_LENGTH + " seconds";
             this.gamePersonalScore.textContent = "Score: " + this.count;
 
             console.log(this.count, "count: ")
@@ -309,31 +305,5 @@ export class Mouse_Maze extends Scene {
             this.Mouse.reset();
 
        }
-
-        // let count = 0;
-        //Counter functionality
-        // this.shapes.text.set_string("COUNTER", context.context);
-        // this.shapes.text.draw(context, program_state, Mat4.translation(15, 10, 0), this.materials.text_image);
-
-        
-
-        
-
-
-        //console.log(this.Maze.calculate_cheese_transform);
-       //console.log(this.Maze.cheese_transform);
-       // console.log(this.Maze.cheese_x);
-
-
-
-        // this.Maze.draw_maze(context, program_state, maze_model_transform);
-        // program_state.set_camera(this.top_down_camera);
-       //  this.Maze.draw_cheese(context, program_state);
-       // this.Mouse.move(dt);
-       // this.Mouse.draw_mouse(context, program_state);
-
-
-        
-        
     }
 }
