@@ -105,6 +105,8 @@ export class Mouse_Maze extends Scene {
         let mouse_speed = 10;
         this.Mouse = new Mouse(this, mouse_start_pos, mouse_speed);
 
+
+
         // Adjust textures for shapes
         this.shapes.floor.arrays.texture_coord.forEach((v, i, l) => {
             v[0] = v[0] * N;
